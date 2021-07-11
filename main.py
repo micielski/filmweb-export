@@ -6,10 +6,12 @@ list = "list-directory"
 chromedriver = "chromedriver-directory"
 
 f = open(list, "r")
+
 browser = webdriver.Chrome(chromedriver)
 browser.set_window_size(1920, 1080)
 browser.get("https://www.filmweb.pl/")
 browser.find_element_by_xpath("//*[@id=\"didomi-notice-agree-button\"]").click()
+
 for x in f:
     ocena = "".join(re.findall(r"(\d+)/", x))
     x = re.sub("[0-9]+/\d\d$", "", x)
