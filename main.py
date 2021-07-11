@@ -11,11 +11,6 @@ movies = settings.get("settings", "list")
 username = settings.get("settings", "username")
 password = settings.get("settings", "password")
 
-print(chromedriver)
-print(movies)
-print(username)
-print(password)
-
 f = open(movies, "r")
 print(f)
 
@@ -41,5 +36,3 @@ for x in f:
     browser.find_element_by_xpath("/html/body/div[4]/div[3]/div[2]/div/div[3]/section/div/div/div/div/div/div[1]/div/div/div/div[1]/div[2]/div/div/a[" + rating + "]").click()
     print("Done executing")
     time.sleep(1)
-
-print("done baby :) :3")
