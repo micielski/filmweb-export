@@ -2,7 +2,7 @@ from selenium import webdriver
 import re
 import time
 
-list = "list-directory"
+list = "list-directori"
 chromedriver = "chromedriver-directory"
 
 f = open(list, "r")
