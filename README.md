@@ -1,5 +1,5 @@
 # txt-filmweb
 
-ToDo's 
-Add a loginning in mechanism (otherwise the project is useless)
-Migrate from chromedriver to geckodriver
+ToDo's /n
+Add a loginning in mechanism (otherwise the project is useless)/n
+Migrate from chromedriver to geckodriver/n
