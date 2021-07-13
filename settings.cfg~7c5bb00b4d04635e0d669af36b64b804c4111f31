@@ -1,5 +1,0 @@
-[settings]
-chromedriver: ./chromedriver
-list: lista.txt
-username: your_mail
-password: your_passwd
