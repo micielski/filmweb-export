@@ -7,3 +7,6 @@ To do:
 - [ ] Migrate from chromedriver to geckodriver
 - [ ] Export filmweb ratings to various formats to export directly to TMDB or RatS
 - [ ] Check whether the user already rated film to prevent unrating already rated movies
+    
+ ## Usage  
+ projekt w remoncie, przepraszamy za utrudnienia
