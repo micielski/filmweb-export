@@ -25,9 +25,9 @@ def filmweb_login():
     driver.find_element_by_xpath("//*[@id=\"site\"]/div[2]/div/div/div[1]/div/div/ul/li[3]/div").click()
     driver.find_element_by_name("j_username").send_keys(userVariables["username"])
     driver.find_element_by_name("j_password").send_keys(userVariables["password"])
-    time.sleep(loginTimeout/2)
+    time.sleep(userVariables["timeout"]/2)
     driver.find_element_by_xpath("/html/body/div[3]/div[2]/div/div/form/div[2]/ul/li[1]/button").click()
-    time.sleep(loginTimeout/2)
+    time.sleep(userVariables["timeout"]/2)
 
 
 def txt_to_filmweb():
