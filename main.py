@@ -1,38 +1,39 @@
 from os import name
-from bs4.element import Tag
-from selenium import webdriver
-from bs4 import BeautifulSoup
 import configparser
 import re
 import time
 import csv
+from bs4.element import Tag
+from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException
 
 userVariables = {}
 settings = configparser.ConfigParser()
 
-def parseConfig():
+def parse_config():
     settings.read("settings.cfg")
 
     for i in ["chromedriver", "movies", "username", "password", "timeout", "token", "session"]:
         userVariables[i] = settings.get("settings", i)
 
-parseConfig()
+parse_config()
 driver = webdriver.Chrome(userVariables["chromedriver"])
 
-def setCookies():
-    cookieLogged = {"name": "_fwuser_logged", "value": "1"}
-    cookieToken = {"name": "_fwuser_token", "value": userVariables["token"] }
-    cookieSession = {"name": "_fwuser_sessionId", "value": userVariables["session"]}
-    driver.add_cookie(cookieLogged)
-    driver.add_cookie(cookieToken)
-    driver.add_cookie(cookieSession)
+def set_cookies():
+    cookie_logged = {"name": "_fwuser_logged", "value": "1"}
+    cookie_token = {"name": "_fwuser_token", "value": userVariables["token"] }
+    cookie_session = {"name": "_fwuser_sessionId", "value": userVariables["session"]}
+    driver.add_cookie(cookie_logged)
+    driver.add_cookie(cookie_token)
+    driver.add_cookie(cookie_session)
     driver.get("https://filmweb.pl/settings")
     if driver.current_url != "https://www.filmweb.pl/settings":
         print("token and session invalid, performing a logging in action")
     else:
         print("we're in!")
 
-def filmwebLogin():
+def filmweb_login():
     driver.get("https://filmweb.pl/login")
     driver.find_element_by_xpath("//*[@id=\"site\"]/div[2]/div/div/div[1]/div/div/ul/li[3]/div").click()
     driver.find_element_by_name("j_username").send_keys(userVariables["username"])
@@ -40,40 +41,57 @@ def filmwebLogin():
     time.sleep(int(userVariables["timeout"])/2)
     driver.find_element_by_xpath("/html/body/div[3]/div[2]/div/div/form/div[2]/ul/li[1]/button").click()
     time.sleep(int(userVariables["timeout"])/2)
-    fetchedSession = driver.get_cookie("_fwuser_sessionId")
-    fetchedToken = driver.get_cookie("_fwuser_token")
-    settings.set("settings", "session", str(fetchedSession))
-    settings.set("settings", "token", str(fetchedToken))
+    fetched_session = driver.get_cookie("_fwuser_sessionId")
+    fetched_token = driver.get_cookie("_fwuser_token")
+    settings.set("settings", "session", str(fetched_session))
+    settings.set("settings", "token", str(fetched_token))
     settings.write("settings.cfg")
-    parseConfig()
+    parse_config()
 
-def filmwebAds():
+def filmweb_ads():
     try:
         driver.find_element_by_id("didomi-notice-agree-button").click()
     except:
         driver.find_element_by_class_name("ws__skipButton").click()
+    return
 
-    return(True)
+def ratingSanitizer(rating):
+    if rating == "":
+        return(0)
+    rating = rating[0]
+    if rating == "0":
+        return("10")
+    return(rating)
 
 def txtToFilmweb():
     movies = open(userVariables["movies"], "r")
     for title in movies:
-        rating = "".join(re.findall(r"\d\/|\d[,.]\d\/|\d[,.]\d", title))
-        rating = rating.strip("/")
-        #rating = "".join(re.findall(r"(\d+)/", title))
-        title = re.sub("[0-9]+/\d\d$", "", title)
+        rating = "".join(re.findall(r"/\d\d\/|\d[,.]\d\/|\d[,.]\d|\d\/", title))
+        rating = ratingSanitizer(rating)
+        title = re.sub("\d\d\/10|\d[,.]\d\/10|\d[,.]\d|\d\/..", "", title)
         title = re.sub("\s+$", "", title)
         title = title.replace(" ", "+")
+
+        if rating == 0:
+            print("Rating not provided for title: " + title)
+            continue
         
         print("Fetched title: " + title + " and rating: " + rating)
         driver.get("https://filmweb.pl/search?q=" + title)
+        url = driver.current_url
+        if "type=user" in url:
+            print("Title " + title + "not found in Filmweb database 1")
+            continue
         
         try:
             driver.find_element_by_class_name("filmPreview__link").click()
             driver.find_element_by_xpath("//*[@id=\"site\"]/div[3]/div[3]/div/div[1]").click()
             driver.find_element_by_xpath("//*[@id=\"site\"]/div[3]/div[3]/div/div[2]/div/div/div/div/div[1]/div/div/div/div[1]/div[2]/div/div/a[" + rating + "]").click()
+        except NoSuchElementException as exception:
+            print("Title " + title + "not found in Filmweb database 2")
+            continue
         except:
-            filmwebAds()
+            filmweb_ads()
             driver.find_element_by_class_name("filmPreview__link").click()
             driver.find_element_by_xpath("//*[@id=\"site\"]/div[3]/div[3]/div/div[1]").click()
             driver.find_element_by_xpath("//*[@id=\"site\"]/div[3]/div[3]/div/div[2]/div/div/div/div/div[1]/div/div/div/div[1]/div[2]/div/div/a[" + rating + "]").click()
@@ -105,11 +123,11 @@ def filmwebExport():
     years = soup.find_all(class_="filmPreview__year")
     ratings = soup.find_all(class_="userRate__rate")
     directors = soup.find_all("span", itemprop="name")
-    titlesAmount = len(titles)
+    titles_amount = len(titles)
     fetchedRatings = []
 
     i = 0
-    while i <= titlesAmount:
+    while i <= titles_amount:
         driver.get("https://imdb.com/search/title/")
         print("Searching for: " + titles[i].text)
         driver.find_element_by_xpath("/html/body/div[4]/div/div[2]/div[3]/form/div/div[1]/div[2]/input").send_keys(titles[i].text)
@@ -126,7 +144,7 @@ def filmwebExport():
 
 
 
-    for i in range(0, titlesAmount):
+    for i in range(0, titles_amount):
         fetchedRatings.append(dict({"Title": titles[i].text, "Directors": directors[i].text, "Year": years[i].text, "Your Rating": ratings[i].text}))
     
     print(fetchedRatings)
@@ -146,8 +164,8 @@ def filmwebExport():
 driver.implicitly_wait(userVariables["timeout"])
 driver.get("https://filmweb.pl/")
 
-#filmwebLogin()
-#setCookies()
+#filmweb_login()
+#set_cookies()
 #filmwebExport()
-filmwebAds()
+filmweb_ads()
 txtToFilmweb()
