@@ -3,7 +3,7 @@ import configparser
 import re
 import time
 import csv
-from bs4.element import Tag
+#from bs4.element import Tag
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
@@ -55,7 +55,7 @@ def filmweb_ads():
         driver.find_element_by_class_name("ws__skipButton").click()
     return
 
-def ratingSanitizer(rating):
+def rating_sanitizer(rating):
     if rating == "":
         return(0)
     rating = rating[0]
@@ -63,11 +63,11 @@ def ratingSanitizer(rating):
         return("10")
     return(rating)
 
-def txtToFilmweb():
+def txt_to_filmweb():
     movies = open(userVariables["movies"], "r")
     for title in movies:
         rating = "".join(re.findall(r"/\d\d\/|\d[,.]\d\/|\d[,.]\d|\d\/", title))
-        rating = ratingSanitizer(rating)
+        rating = rating_sanitizer(rating)
         title = re.sub("\d\d\/10|\d[,.]\d\/10|\d[,.]\d|\d\/..", "", title)
         title = re.sub("\s+$", "", title)
         title = title.replace(" ", "+")
@@ -96,7 +96,7 @@ def txtToFilmweb():
             driver.find_element_by_xpath("//*[@id=\"site\"]/div[3]/div[3]/div/div[1]").click()
             driver.find_element_by_xpath("//*[@id=\"site\"]/div[3]/div[3]/div/div[2]/div/div/div/div/div[1]/div/div/div/div[1]/div[2]/div/div/a[" + rating + "]").click()
 
-def filmwebExport():
+def filmweb_export():
 
     driver.get("https://filmweb.pl/user/" + userVariables["username"] + "/films")
     
@@ -166,6 +166,6 @@ driver.get("https://filmweb.pl/")
 
 #filmweb_login()
 #set_cookies()
-#filmwebExport()
+#filmweb_export()
 filmweb_ads()
-txtToFilmweb()
+txt_to_filmweb()
