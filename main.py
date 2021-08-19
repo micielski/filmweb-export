@@ -8,9 +8,9 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 
+p = 1
 userVariables = {}
 settings = configparser.ConfigParser()
-
 def parse_config():
     settings.read("settings.cfg")
 
@@ -30,12 +30,18 @@ def set_cookies():
     driver.get("https://filmweb.pl/settings")
     if driver.current_url != "https://www.filmweb.pl/settings":
         print("token and session invalid, performing a logging in action")
+        filmweb_login()
     else:
         print("we're in!")
 
 def filmweb_login():
     driver.get("https://filmweb.pl/login")
-    driver.find_element_by_xpath("//*[@id=\"site\"]/div[2]/div/div/div[1]/div/div/ul/li[3]/div").click()
+    try:
+        driver.find_element_by_xpath("//*[@id=\"site\"]/div[2]/div/div/div[1]/div/div/ul/li[3]/div").click()
+    except:
+        filmweb_ads()
+        filmweb_login()
+        return
     driver.find_element_by_name("j_username").send_keys(userVariables["username"])
     driver.find_element_by_name("j_password").send_keys(userVariables["password"])
     time.sleep(int(userVariables["timeout"])/2)
@@ -97,75 +103,77 @@ def txt_to_filmweb():
             driver.find_element_by_xpath("//*[@id=\"site\"]/div[3]/div[3]/div/div[2]/div/div/div/div/div[1]/div/div/div/div[1]/div[2]/div/div/a[" + rating + "]").click()
 
 def filmweb_export():
+    done = False
+    titles = []
+    years = []
+    ratings = []
+    directors = []
+    const = []
+    p = 1
+    while done != True:
+        driver.get("https://filmweb.pl/user/" + userVariables["username"] + "/films?page=" + str(p))
+        p+=1
+        print(titles)
 
-    driver.get("https://filmweb.pl/user/" + userVariables["username"] + "/films")
-    
-    html = driver.page_source
-    soup = BeautifulSoup(html, "lxml")
-    
-    actors = soup.find_all(class_="myVoteBox__rightCol")
-    actors2 = soup.find_all(class_="barFilter__desc")
+        html = driver.page_source
+        if "oceniłeś" in html:
+            done = True
+            break
+        soup = BeautifulSoup(html, "lxml")
 
-    for actor in actors:
-        actor.decompose()
-
-    for actor2 in actors2:
-        actor2.decompose()
-
-    titles = soup.find_all(class_="filmPreview__title")
-
-    links = []
-    for link in soup.find_all(class_="filmPreview__link"):
-        links.append(link.get('href'))
-
-    print(links[0])
-
-    years = soup.find_all(class_="filmPreview__year")
-    ratings = soup.find_all(class_="userRate__rate")
-    directors = soup.find_all("span", itemprop="name")
-    titles_amount = len(titles)
+        titles_amount = len(soup.find_all(class_="filmPreview__title"))
+        for i in range(0, titles_amount):
+            vote_box = soup.find(class_="myVoteBox__mainBox").extract()
+            znaleziony = vote_box.find(class_=("filmPreview__title"))
+            years.append(vote_box.find(class_="filmPreview__year").text)
+            ratings.append(vote_box.find(class_="userRate__rate").text)
+            #directors.append(vote_box.find("span", itemprop="name").text)
+            orig_title = vote_box.find(class_="filmPreview__originalTitle")
+            if orig_title != None:
+                titles.append(orig_title.text)
+            else:
+                titles.append(znaleziony.text)
     fetchedRatings = []
 
     i = 0
-    while i <= titles_amount:
+    rated_movies = len(titles)
+    print(rated_movies)
+    while i < rated_movies:
         driver.get("https://imdb.com/search/title/")
-        print("Searching for: " + titles[i].text)
-        driver.find_element_by_xpath("/html/body/div[4]/div/div[2]/div[3]/form/div/div[1]/div[2]/input").send_keys(titles[i].text)
-        driver.find_element_by_name("release_date-min").send_keys(years[i].text)
-        driver.find_element_by_name("release_date-max").send_keys(years[i].text)
-        time.sleep(5)
+        print("Searching for: " + titles[i])
+        driver.find_element_by_xpath("/html/body/div[4]/div/div[2]/div[3]/form/div/div[1]/div[2]/input").send_keys(titles[i])
+        driver.find_element_by_name("release_date-min").send_keys(years[i])
+        driver.find_element_by_name("release_date-max").send_keys(years[i])
         driver.find_element_by_xpath("/html/body/div[4]/div/div[2]/div[3]/form/div/p[3]/button").click()
         try:
             driver.find_element_by_class_name("loadlate").click()
+            imdb_url = driver.current_url
+            const.append(re.findall(r"tt\d{7,8}", imdb_url)[0])
+            print(const)
         except:
-            print(titles[i].text + " Not Found. Skipping")
-        time.sleep(5)
+            print(titles[i] + " Not Found. Skipping")
+            const.append("error")
         i += 1
 
-
-
-    for i in range(0, titles_amount):
-        fetchedRatings.append(dict({"Title": titles[i].text, "Directors": directors[i].text, "Year": years[i].text, "Your Rating": ratings[i].text}))
+    print(str(const))
+    for i in range(0, len(const)):
+        fetchedRatings.append(dict({"Const": str(const[i]),"Title": titles[i], "Year": years[i], "Your Rating": ratings[i]}))
     
     print(fetchedRatings)
-    '''
     with open("export.csv", "w", newline="") as imdbCSV:
         fieldnames = ["Position", "Const", "Created", "Modified", "Description", "Title", "URL", "Title Type", "IMDb Rating", "Runtime (mins)", "Year", "Genres", "Num Votes", "Release Date", "Directors", "Your Rating", "Date Rated"]
         writer = csv.DictWriter(imdbCSV, fieldnames=fieldnames)
         writer.writeheader()
         for fetchedRating in fetchedRatings:
             writer.writerow(fetchedRating)
-    '''
 
-
-
-
-#driver = webdriver.Firefox(userVariables["chromedriver"])
 driver.implicitly_wait(userVariables["timeout"])
 driver.get("https://filmweb.pl/")
 
 #filmweb_login()
 #set_cookies()
-#filmweb_export()
-filmweb_ads()
-txt_to_filmweb()
+#filmweb_ads()
+#txt_to_filmweb()
+
+set_cookies()
+filmweb_export()
