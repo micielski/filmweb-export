@@ -1,12 +1,14 @@
 # :movie_camera: filmweb-tools
-
-OwO, what's this?  
-Just a simple python program being able to parse movie from a .txt file and then rate them accordingly on filmweb.  
+what's this?  
+Just a simple python script able to export movies to imdbCSV v3 compatible with i.e. TMDB
   
 To do: 
 - [ ] Migrate from chromedriver to geckodriver
-- [ ] Export filmweb ratings to various formats to export directly to TMDB or RatS
+- [x] Export filmweb ratings to various formats to export directly to TMDB
 - [ ] Check whether the user already rated film to prevent unrating already rated movies
     
+ ## Installation
+i'm not sure...
+    
  ## Usage  
- projekt w remoncie, przepraszamy za utrudnienia
+python3 filmwebtools.py
