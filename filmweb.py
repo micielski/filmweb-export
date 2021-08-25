@@ -4,9 +4,6 @@ import csv
 from bs4 import BeautifulSoup
 from selenium import webdriver
 
-p = 1
-
-
 CHROMEDRIVER = "./chromedriver"
 
 username = sys.argv[1]
@@ -19,7 +16,7 @@ driver.implicitly_wait(30)
 def set_cookies(token, session):
     driver.get("https://filmweb.pl")
     cookie_logged = {"name": "_fwuser_logged", "value": "1"}
-    cookie_token = {"name": "_fwuser_token", "value": token }
+    cookie_token = {"name": "_fwuser_token", "value": token}
     cookie_session = {"name": "_fwuser_sessionId", "value": session}
     driver.add_cookie(cookie_logged)
     driver.add_cookie(cookie_token)
@@ -28,6 +25,8 @@ def set_cookies(token, session):
     if driver.current_url != "https://www.filmweb.pl/settings":
         print("Token and session combination is invalid")
         return False
+    else:
+        return True
 
 def filmweb_export(username):
     done = False
@@ -38,7 +37,7 @@ def filmweb_export(username):
     p = 1
     while done != True:
         driver.get("https://filmweb.pl/user/" + username + "/films?page=" + str(p))
-        p+=1
+        p += 1
 
         html = driver.page_source
         done = True if "oceniłeś" in html else False
@@ -55,7 +54,7 @@ def filmweb_export(username):
                 titles.append(orig_title.text)
             else:
                 titles.append(znaleziony.text)
-        fetchedRatings = []
+        fetched_Ratings = []
 
     i = 0
     rated_movies = len(titles)
@@ -76,14 +75,13 @@ def filmweb_export(username):
         i += 1
 
     for i in range(0, len(const)):
-        fetchedRatings.append(dict({"Const": str(const[i]),"Title": titles[i], "Year": years[i], "Your Rating": ratings[i]}))
-    
-    with open("export.csv", "w", newline="") as imdbCSV:
+        fetched_Ratings.append(dict({"Const": str(const[i]), "Title": titles[i], "Year": years[i], "Your Rating": ratings[i]}))
+    with open("export.csv", "w", newline="") as imdb_CSV:
         fieldnames = ["Position", "Const", "Created", "Modified", "Description", "Title", "URL", "Title Type", "IMDb Rating", "Runtime (mins)", "Year", "Genres", "Num Votes", "Release Date", "Directors", "Your Rating", "Date Rated"]
-        writer = csv.DictWriter(imdbCSV, fieldnames=fieldnames)
+        writer = csv.DictWriter(imdb_CSV, fieldnames=fieldnames)
         writer.writeheader()
-        for fetchedRating in fetchedRatings:
-            writer.writerow(fetchedRating)
+        for fetched_Rating in fetched_Ratings:
+            writer.writerow(fetched_Rating)
 
 if set_cookies(token, session) != False:
     filmweb_export(username)
