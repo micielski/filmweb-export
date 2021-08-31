@@ -1,9 +1,17 @@
 # :movie_camera: filmweb-export
-export ratings to tmdb
+Export Filmweb's ratings to a TMDB compatible csv file.
   
- ## Installation && usage  
+ ## Installation  
+```
+pip3 install bs4 selenium argparse
 git clone https://github.com/xrew11/filmweb-export.git  
-cd to the directory you've created by ^ command  
-download chromedirectory and place it here, change location in .py file if needed  
-python3 filmweb.py username token session  
-yeah  
+cd filmweb-export
+```
+ ## Usage
+ ```
+ python3 filmweb.py -h
+  -h, --help        show this help message and exit
+  -s , --session    Filmweb Session Cookie (required)
+  -u , --username   Filmweb Username (required)
+  -f , --firefox    Firefox binary location (optional)
+  ```
