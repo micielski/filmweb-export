@@ -11,7 +11,7 @@ cd filmweb-export
  ```
  python3 filmweb.py -h
   -h, --help        show this help message and exit
-  -s , --session    Filmweb Session Cookie (required)
-  -u , --username   Filmweb Username (required)
+  -s , --session    Filmweb uession cookie (required)
+  -u , --username   Filmweb username (required)
   -f , --firefox    Firefox binary location (optional)
   ```
