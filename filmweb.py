@@ -1,6 +1,5 @@
 import re
 import csv
-import logging
 import time
 from datetime import datetime
 from bs4 import BeautifulSoup
@@ -24,15 +23,12 @@ parser.add_argument("-d", "--debugging", action='store_true',
 args = parser.parse_args()
 
 options = webdriver.FirefoxOptions()
-if not args.debugging:
-    logging.disable(logging.DEBUG)
-    options.add_argument('--headless')
-driver = webdriver.Firefox(firefox_binary=(args.firefox), options=options)
-driver.implicitly_wait(30)
 
-logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s - %(levelname)s - %(message)s',
-                    datefmt='%H:%M:%S')
+if not args.debugging:
+    options.add_argument('--headless')
+
+driver = webdriver.Firefox(firefox_binary=(args.firefox), options=options)
+driver.implicitly_wait(10)
 
 current_date = datetime.now().strftime("%d-%m-%Y-%H:%M:%S")
 
@@ -52,7 +48,7 @@ def set_cookies(session):
     driver.add_cookie(cookie_session)
     driver.get("https://filmweb.pl/settings")
     if driver.current_url != "https://www.filmweb.pl/settings":
-        logging.error('Session cookie is invalid.')
+        print('Session cookie is invalid.')
         driver.quit()
         return False
     else:
@@ -71,7 +67,6 @@ def scrapeRatings(page, username):
     years = []
     ratings = []
     const = []
-    logging.info(f"Scraping ratings from page {page}")
     driver.get(
         f"https://filmweb.pl/user/{username}/films?page={page}")
     html = driver.page_source
@@ -112,12 +107,11 @@ def getImdbID(titles, years, const, rated_movies):
                 const.append(re.findall(r"tt\d{7,8}", imdb_url)[0])
                 movie_index += 1
             except NoSuchElementException:
-                logging.warning(f"{titles[movie_index]} not found.")
                 const.append("notfound")
                 movie_index += 1
                 break
             except IndexError as e:
-                logging.error(f"Not found ID in this url: {imdb_url} {e}")
+                print(f"Not found ID in this url: {imdb_url} {e}")
                 continue
             break
     return const
@@ -132,32 +126,30 @@ def appendRatings(const, titles, years, ratings):
     return fetched_Ratings
 
 
-def writeRows(fetched_Ratings):
-    with open(f"export-{current_date}.csv", "a", newline="") as imdb_CSV:
-        for fetched_Rating in fetched_Ratings:
-            csv_writer = csv.DictWriter(imdb_CSV, fieldnames=fieldnames)
-            csv_writer.writerow(fetched_Rating)
+def writeRows(fetched_ratings):
+    with open(f"export-{current_date}.csv", "a", newline="") as imdb_csv:
+        for fetched_rating in fetched_ratings:
+            csv_writer = csv.DictWriter(imdb_csv, fieldnames=fieldnames)
+            csv_writer.writerow(fetched_rating)
 
 
 def filmweb_export(username):
     initializeCSV(current_date)
     page = 1
-    done_scraping = False  # we just started right
+    done_scraping = False
     while not done_scraping:
-        titles, years, ratings, const, done_scraping = scrapeRatings(page,
-                                                                     username)
+        titles, years, ratings, const, done_scraping = scrapeRatings(page, username)
         rated_movies = len(titles)
-        logging.info(f"Found {rated_movies} rated movies.")
+        print(f"Found {rated_movies} rated movies.")
+        time.sleep(5)
         const = getImdbID(titles, years, const, rated_movies)
 
-        # prepare fetched ratings to be wrote in CSV
-        fetched_Ratings = appendRatings(const, titles, years, ratings)
-        # write fetched ratings to CSV
-        writeRows(fetched_Ratings)
+        fetched_ratings = appendRatings(const, titles, years, ratings)
+        writeRows(fetched_ratings)
         page += 1
 
 
-logging.info("filmweb-export starting")
+print("filmweb-export starting")
 if set_cookies(args.session):
     filmweb_export(args.username)
     driver.quit()
