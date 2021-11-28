@@ -4,6 +4,7 @@ import time
 from datetime import datetime
 from bs4 import BeautifulSoup
 from selenium import webdriver
+from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 from argparse import ArgumentParser
 
@@ -15,7 +16,9 @@ parser = ArgumentParser(
 parser.add_argument("-s", "--session", type=str, required=True,
                     metavar="", help="Filmweb Session Cookie")
 parser.add_argument("-u", "--username", type=str, metavar="",
-                    required=True, help="Filmweb Username")
+                    required=True, help="Filmweb Username Cookie Value")
+parser.add_argument("-t", "--token", type=str, metavar="",
+                    required=True, help="Filmweb Token Cookie Value")
 parser.add_argument("-f", "--firefox", type=str,
                     metavar="", help="Firefox binary location")
 parser.add_argument("-d", "--debugging", action='store_true',
@@ -40,11 +43,13 @@ fieldnames = ["Position", "Const", "Created", "Modified", "Description",
 # program itself
 
 
-def set_cookies(session):
+def set_cookies(session, token):
     driver.get("https://filmweb.pl")
     cookie_logged = {"name": "_fwuser_logged", "value": "1"}
+    cookie_token = {"name": "_fwuser_token", "value": token}
     cookie_session = {"name": "_fwuser_sessionId", "value": session}
     driver.add_cookie(cookie_logged)
+    driver.add_cookie(cookie_token)
     driver.add_cookie(cookie_session)
     driver.get("https://filmweb.pl/settings")
     if driver.current_url != "https://www.filmweb.pl/settings":
@@ -101,8 +106,7 @@ def getImdbID(titles, years, const, rated_movies):
         while True:
             try:
                 time.sleep(1)
-                driver.find_element_by_xpath(
-                    "//img[@class='loadlate']").click()
+                driver.find_element(By.XPATH, "//img[@class='loadlate']").click()
                 imdb_url = driver.current_url
                 const.append(re.findall(r"tt\d{7,8}", imdb_url)[0])
                 movie_index += 1
@@ -150,6 +154,6 @@ def filmweb_export(username):
 
 
 print("filmweb-export starting")
-if set_cookies(args.session):
+if set_cookies(args.session, args.token):
     filmweb_export(args.username)
     driver.quit()
