@@ -1,5 +1,5 @@
 beautifulsoup4
 bs4
-selenium==4.1.0
+selenium>=4.1.0
 argparse
 lxml
