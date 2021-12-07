@@ -1,12 +1,12 @@
 # :movie_camera: filmweb-export
 Export Filmweb's ratings to a TMDB import-compatible csv file.  
-Please note, that exporting 100 ratings (as of release 3) may take up to ~15 minutes.
+Exporting 100 ratings (as of release 4) may take up to ~3 minutes.
   
  ## Installation  
 ```
-pip install bs4 selenium argparse
 git clone https://github.com/xrew11/filmweb-export.git  
 cd filmweb-export
+pip install -r requirements.txt
 ```
  ## Usage
  ```
