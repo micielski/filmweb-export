@@ -1,15 +1,12 @@
 import re
 import csv
 import time
+import requests
 from datetime import datetime
 from bs4 import BeautifulSoup
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException
 from argparse import ArgumentParser
 
-
-# initial configuration
 
 parser = ArgumentParser(
     description="Export Filmweb's ratings to a TMDB compatible csv file.")
@@ -24,6 +21,12 @@ parser.add_argument("-f", "--firefox", type=str,
 parser.add_argument("-d", "--debugging", action='store_true',
                     help="Enable debugging")
 args = parser.parse_args()
+
+cookies = {
+    "_fwuser_logged": "1",
+    "_fwuser_token": args.token,
+    "_fwuser_sessionId": args.session
+}
 
 options = webdriver.FirefoxOptions()
 
@@ -44,20 +47,13 @@ fieldnames = ["Position", "Const", "Created", "Modified", "Description",
 
 
 def set_cookies(session, token):
-    driver.get("https://filmweb.pl")
-    cookie_logged = {"name": "_fwuser_logged", "value": "1"}
-    cookie_token = {"name": "_fwuser_token", "value": token}
-    cookie_session = {"name": "_fwuser_sessionId", "value": session}
-    driver.add_cookie(cookie_logged)
-    driver.add_cookie(cookie_token)
-    driver.add_cookie(cookie_session)
-    driver.get("https://filmweb.pl/settings")
-    if driver.current_url != "https://www.filmweb.pl/settings":
-        print('Session cookie is invalid.')
-        driver.quit()
-        return False
-    else:
+    r = requests.get("https://filmweb.pl/settings", cookies=cookies)
+    if "Twój adres IP" in r.text:
+        print("Valid cookies")
         return True
+    else:
+        print("Invalid cookies")
+        return False
 
 
 def initializeCSV(date):
@@ -72,52 +68,49 @@ def scrapeRatings(page, username):
     years = []
     ratings = []
     const = []
-    driver.get(
-        f"https://filmweb.pl/user/{username}/films?page={page}")
-    html = driver.page_source
+    r = requests.get(f"https://filmweb.pl/user/{username}/films?page={page}", cookies=cookies)
+    html = r.text
+
     done_scraping = True if "oceniłeś" in html else False
+    if done_scraping is True:
+        print(f"Export finished, see results in export-{current_date}.csv")
+    else:
+        soup = BeautifulSoup(html, "lxml")
 
-    soup = BeautifulSoup(html, "lxml")
+        titles_amount = len(soup.find_all(class_="filmPreview__title"))
 
-    titles_amount = len(soup.find_all(class_="filmPreview__title"))
-
-    for i in range(0, titles_amount):
-        vote_box = soup.find(class_="myVoteBox__mainBox").extract()
-        znaleziony = vote_box.find(class_=("filmPreview__title"))
-        years.append(vote_box.find(class_="filmPreview__year").text)
-        ratings.append(vote_box.find(class_="userRate__rate").text)
-        orig_title = vote_box.find(class_="filmPreview__originalTitle")
-        if orig_title is not None:
-            titles.append(orig_title.text)
-        else:
-            titles.append(znaleziony.text)
-    return titles, years, ratings, const, done_scraping
+        for i in range(0, titles_amount):
+            vote_box = soup.find(class_="myVoteBox__mainBox").extract()
+            znaleziony = vote_box.find(class_=("filmPreview__title"))
+            years.append(vote_box.find(class_="filmPreview__year").text)
+            ratings.append(vote_box.find(class_="userRate__rate").text)
+            orig_title = vote_box.find(class_="filmPreview__originalTitle")
+            if orig_title is not None:
+                titles.append(orig_title.text)
+            else:
+                titles.append(znaleziony.text)
+        return titles, years, ratings, const, done_scraping
 
 
 def getImdbID(titles, years, const, rated_movies):
     movie_index = 0
     while movie_index < rated_movies:
         print(f"Searching for: {titles[movie_index]}")
-        driver.get(
-            f"https://imdb.com/search/title/?realm=title&title=\
-            {titles[movie_index]} &release_date-min={years[movie_index]}\
+        r = requests.get(f"https://imdb.com/search/title/?realm=title&title=\
+        {titles[movie_index]} &release_date-min={years[movie_index]}\
 &release_date-max={years[movie_index]}")
 
-        while True:
-            try:
-                time.sleep(1)
-                driver.find_element(By.XPATH, "//img[@class='loadlate']").click()
-                imdb_url = driver.current_url
-                const.append(re.findall(r"tt\d{7,8}", imdb_url)[0])
-                movie_index += 1
-            except NoSuchElementException:
-                const.append("notfound")
-                movie_index += 1
-                break
-            except IndexError as e:
-                print(f"Not found ID in this url: {imdb_url} {e}")
-                continue
-            break
+        html = r.text
+        soup = BeautifulSoup(html, "lxml")
+        try:
+            film_block = soup.find(class_="lister-item-header").extract()
+            imdb_id = film_block.find('a').get('href')
+            const.append(re.findall(r"tt\d{7,8}", imdb_id)[0])
+            movie_index += 1
+        except AttributeError:
+            const.append("notfound")
+            print(f"Couldn't find {titles[movie_index]}")
+            movie_index += 1
     return const
 
 
