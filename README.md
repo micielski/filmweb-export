@@ -1,5 +1,5 @@
 # :movie_camera: filmweb-export
-Export Filmweb's ratings to a TMDB import-compatible csv file.
+Export Filmweb's ratings to a TMDB import-compatible csv file.  
 Please note, that exporting 100 ratings (as of release 3) may take up to ~15 minutes.
   
  ## Installation  
