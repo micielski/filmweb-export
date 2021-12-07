@@ -1,5 +1,6 @@
 # :movie_camera: filmweb-export
-Export Filmweb's ratings to a TMDB compatible csv file.
+Export Filmweb's ratings to a TMDB import-compatible csv file.
+Please note, that exporting 100 ratings (as of release 3) may take up to ~15 minutes.
   
  ## Installation  
 ```
@@ -11,7 +12,9 @@ cd filmweb-export
  ```
  python filmweb.py -h
   -h, --help        show this help message and exit
-  -s , --session    Filmweb uession cookie (required)
-  -u , --username   Filmweb username (required)
-  -f , --firefox    Firefox binary location (optional)
+  -s, --session    Filmweb Session Cookie
+  -u, --username   Filmweb Username Cookie Value
+  -t, --token      Filmweb Token Cookie Value
+  -f, --firefox    Firefox binary location
+  -d, --debugging   Enable debugging
   ```
