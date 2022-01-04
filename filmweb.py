@@ -4,22 +4,22 @@ import requests
 from colorama import Fore, Style
 from datetime import datetime
 from bs4 import BeautifulSoup
-from selenium import webdriver
+#from selenium import webdriver
 from argparse import ArgumentParser
 
 
 parser = ArgumentParser(
     description="Export Filmweb's ratings to a TMDB compatible csv file.")
-parser.add_argument("-s", "--session", type=str, required=True,
-                    metavar="", help="Filmweb Session Cookie")
-parser.add_argument("-u", "--username", type=str, metavar="",
-                    required=True, help="Filmweb Username Cookie Value")
-parser.add_argument("-t", "--token", type=str, metavar="",
-                    required=True, help="Filmweb Token Cookie Value")
-parser.add_argument("-f", "--firefox", type=str,
-                    metavar="", help="Firefox binary location")
-parser.add_argument("-d", "--debugging", action='store_true',
-                    help="Enable debugging")
+parser.add_argument("--username", type=str, metavar="<user>",
+                    required=True, help="Filmweb username")
+parser.add_argument("--token", type=str, metavar="<token>",
+                    required=True, help="Filmweb token cookie")
+parser.add_argument("--session", type=str, metavar="<session>", required=True,
+                    help="Filmweb session cookie")
+# parser.add_argument("-f", "--firefox", type=str,
+#                     metavar="", help="Firefox binary location")
+# parser.add_argument("-d", "--debugging", action='store_true',
+#                     help="Enable debugging")
 args = parser.parse_args()
 
 cookies = {
@@ -28,32 +28,81 @@ cookies = {
     "_fwuser_sessionId": args.session
 }
 
-options = webdriver.FirefoxOptions()
+#options = webdriver.FirefoxOptions()
 
-if not args.debugging:
-    options.add_argument('--headless')
+#if not args.debugging:
+#    options.add_argument('--headless')
 
-driver = webdriver.Firefox(firefox_binary=(args.firefox), options=options)
-driver.implicitly_wait(10)
+#driver = webdriver.Firefox(firefox_binary=(args.firefox), options=options)
+#driver.implicitly_wait(10)
 
 current_date = datetime.now().strftime("%d-%m-%Y-%H:%M:%S")
 
-fieldnames = ["Position", "Const", "Created", "Modified", "Description",
-              "Title", "URL", "Title Type", "IMDb Rating", "Runtime (mins)",
-              "Year", "Genres", "Num Votes", "Release Date", "Directors",
-              "Your Rating", "Date Rated"]
-
-
-# program itself
+fieldnames = ["Const", "Your Rating", "Date Rated", "Title", "URL",
+              "Title Type", "IMDb Rating", "Runtime (mins)", "Year",
+              "Genres", "Num Votes", "Release Date", "Directors"]
 
 
 class Movie:
-    def __init__(self, title, orig_title, year, rating, imdb_id):
+    def __init__(self, title, orig_title, year, rating, translated):
         self.title = title
-        self.orig_title = orig_title
         self.year = year
         self.rating = rating
-        self.imdb_id = imdb_id
+        self.translated = translated
+        if translated:
+            self.orig_title = orig_title.text
+        else:
+            self.orig_title = None
+        self.imdb_id = self.getImdbID()
+        self.writeMovie()
+
+    def getImdbID(self):
+        if self.translated: # title is translated to polish on filmweb
+            r = requests.get(f"https://imdb.com/search/title/?realm=title&title=\
+            {self.orig_title}&release_date-min={self.year}\
+            &release_date-max={self.year}")
+            soup = BeautifulSoup(r.text, "lxml")
+            try:
+                film_block = soup.find(class_="lister-item-header").extract()
+                imdb_id = film_block.find('a').get('href')
+                imdb_id = re.findall(r"tt\d{7,8}", imdb_id)[0]
+                print(f"{Fore.GREEN}[+]{Style.RESET_ALL} {self.orig_title}")
+                return imdb_id
+            except AttributeError: # original movie title not found, fallback to polish title
+                print(f"{Fore.YELLOW}[/]{Style.RESET_ALL} {self.orig_title} not found, fallback to the Polish title")
+                r = requests.get(f"https://imdb.com/search/title/?realm=title&title=\
+                {self.title}&release_date-min={self.year}\
+                &release_date-max={self.year}")
+                soup = BeautifulSoup(r.text, "lxml")
+                try:
+                    film_block = soup.find(class_="lister-item-header").extract()
+                    imdb_id = film_block.find('a').get('href')
+                    imdb_id = re.findall(r"tt\d{7,8}", imdb_id)[0]
+                    print(f"{Fore.GREEN}[+]{Style.RESET_ALL} {self.title}")
+                    return imdb_id
+                except AttributeError:
+                    print(f"{Fore.RED}[-]{Style.RESET_ALL} {self.title} not found")
+                    return "not-found"
+        else: # title isn't translated to polish on filmweb
+            r = requests.get(f"https://imdb.com/search/title/?realm=title&title=\
+            {self.orig_title}&release_date-min={self.year}\
+            &release_date-max={self.year}")
+            soup = BeautifulSoup(r.text, "lxml")
+            try:
+                film_block = soup.find(class_="lister-item-header").extract()
+                imdb_id = film_block.find('a').get('href')
+                imdb_id = re.findall(r"tt\d{7,8}", imdb_id)[0]
+                print(f"{Fore.GREEN}[+]{Style.RESET_ALL} {self.title}")
+                return imdb_id
+            except AttributeError:
+                print(f"{Fore.RED}[-]{Style.RESET_ALL} {self.title} not found")
+                return "not-found"
+
+    def writeMovie(self):
+        with open(f"export-{current_date}.csv", "a", newline="") as imdb_csv:
+            csv_writer = csv.DictWriter(imdb_csv, fieldnames=fieldnames)
+            csv_writer.writerow({'Const': self.imdb_id, 'Title': self.orig_title, 'Year': self.year,
+                                 'Your Rating': self.rating})
 
 
 def set_cookies(session, token):
@@ -66,103 +115,49 @@ def set_cookies(session, token):
         return False
 
 
-def initializeCSV(date):
+def get_username():
+    pass
+
+
+def initialize_csv(date):
     with open(f"export-{date}.csv", "w", newline="") as imdb_CSV:
         writer = csv.DictWriter(imdb_CSV, fieldnames=fieldnames)
         writer.writeheader()
 
 
-def scrapeRatings(page, username):
-    done_scraping = False
-    titles = []
-    years = []
-    ratings = []
-    const = []
-    type = "films"
-
+def scrapeRatings(page, username, type):
     r = requests.get(f"https://filmweb.pl/user/{username}/{type}?page={page}", cookies=cookies)
     if "emptyContent" in r.text:
-        if type == "films":
-            type = "serials"
-            r = requests.get(f"https://filmweb.pl/user/{username}/{type}?page={page}", cookies=cookies)
+        if type == "serials":
+            print(f"Export finished in export-{current_date}.csv")
+            return True
         else:
-            done_scraping = True
+            return True
 
-    if done_scraping is True:
-        print(f"Export finished in export-{current_date}.csv")
-    else:
-        soup = BeautifulSoup(r.text, "lxml")
+    soup = BeautifulSoup(r.text, "lxml")
+    titles_amount = len(soup.find_all(class_="myVoteBox__mainBox"))
+    print(f"Scraping {titles_amount} {type} from page {page}")
 
-        titles_amount = len(soup.find_all(class_="filmPreview__title"))
-        print(f"Scraping {titles_amount} {type} from page {page}")
-
-        for i in range(0, titles_amount):
-            vote_box = soup.find(class_="myVoteBox__mainBox").extract()
-            polish_title = vote_box.find(class_=("filmPreview__title"))
-            orig_title = vote_box.find(class_="filmPreview__originalTitle")
-            years.append(vote_box.find(class_="filmPreview__year").text)
-            ratings.append(vote_box.find(class_="userRate__rate").text)
-            if orig_title is not None:
-                titles.append(orig_title.text)
-            else:
-                titles.append(polish_title.text)
-        return titles, years, ratings, const
-
-
-def getImdbID(titles, years, const, rated_movies):
-    movie_index = 0
-    while movie_index < rated_movies:
-        r = requests.get(f"https://imdb.com/search/title/?realm=title&title=\
-        {titles[movie_index]}&release_date-min={years[movie_index]}\
-        &release_date-max={years[movie_index]}")
-
-        soup = BeautifulSoup(r.text, "lxml")
-        try:
-            film_block = soup.find(class_="lister-item-header").extract()
-            imdb_id = film_block.find('a').get('href')
-            const.append(re.findall(r"tt\d{7,8}", imdb_id)[0])
-            print(f"{Fore.GREEN}[+]{Style.RESET_ALL} {titles[movie_index]}")
-            movie_index += 1
-        except AttributeError:
-            const.append("notfound")
-            print(f"{Fore.RED}[-]{Style.RESET_ALL} {titles[movie_index]} not found")
-            movie_index += 1
-    return const
-
-
-def appendRatings(const, titles, years, ratings):
-    fetched_Ratings = []
-    for i in range(0, len(const)):
-        fetched_Ratings.append(dict({"Const": str(
-            const[i]), "Title": titles[i], "Year": years[i],
-            "Your Rating": ratings[i]}))
-    return fetched_Ratings
-
-
-def writeRows(fetched_ratings):
-    with open(f"export-{current_date}.csv", "a", newline="") as imdb_csv:
-        for fetched_rating in fetched_ratings:
-            csv_writer = csv.DictWriter(imdb_csv, fieldnames=fieldnames)
-            csv_writer.writerow(fetched_rating)
+    for i in range(0, titles_amount):
+        vote_box = soup.find(class_="myVoteBox__mainBox").extract()
+        title = vote_box.find(class_="filmPreview__title").text
+        orig_title = vote_box.find(class_="filmPreview__originalTitle")
+        translated = False if orig_title is None else True
+        year = vote_box.find(class_="filmPreview__year").text
+        rating = vote_box.find(class_="userRate__rate").text
+        Movie(title, orig_title, year, rating, translated)
 
 
 def filmweb_export(username):
-    initializeCSV(current_date)
+    initialize_csv(current_date)
+    page = 29
+    while not scrapeRatings(page, username, "films"):
+        page += 1
     page = 1
-    done_scraping = False
-    while not done_scraping:
-        try:
-            titles, years, ratings, const, done_scraping = scrapeRatings(page, username)
-        except TypeError:  # it means scraping and export finished
-            break
-        const = getImdbID(titles, years, const, len(titles))
-
-        fetched_ratings = appendRatings(const, titles, years, ratings)
-        writeRows(fetched_ratings)
+    while not scrapeRatings(page, username, "serials"):
         page += 1
 
 
-print("filmweb-export starting")
+print("filmweb-export!")
 if set_cookies(args.session, args.token):
     filmweb_export(args.username)
-    driver.quit()
