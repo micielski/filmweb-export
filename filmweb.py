@@ -150,7 +150,7 @@ def scrapeRatings(page, username, type):
 
 def filmweb_export(username):
     initialize_csv(current_date)
-    page = 29
+    page = 1
     while not scrapeRatings(page, username, "films"):
         page += 1
     page = 1
