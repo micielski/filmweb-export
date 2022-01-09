@@ -13,7 +13,7 @@ Exporting 100 ratings (as of release 4) may take up to ~3 minutes.
 
 - [ ] Multi-threading
 
-- [ ] Don't require username
+- [x] Don't require username
 
 - [ ] Docker support
 
@@ -31,7 +31,7 @@ pip install -r requirements.txt
 
 ```
 ❯ python filmweb.py -h
-usage: filmweb.py [-h] --username <user> --token <token> --session <session>
+usage: filmweb.py [-h] [--username <user>] --token <token> --session <session>
 
 Export Filmweb's ratings to a TMDB compatible csv file.
 
