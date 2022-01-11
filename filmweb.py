@@ -2,6 +2,7 @@ import re
 import csv
 from datetime import datetime
 import requests
+import json
 from colorama import Fore, Style
 from bs4 import BeautifulSoup
 from argparse import ArgumentParser
@@ -44,47 +45,53 @@ class Movie:
         self.writeMovie()
 
 
-
-    def get_imdb_id(self, title, year):
-        r = requests.get(f"https://imdb.com/search/title/?realm=title&title=\
-            {title}&release_date-min={year}\
-            &release_date-max={year}")
-        soup = BeautifulSoup(r.text, "lxml")
-        try:
-            film_block = soup.find(class_="lister-item-header").extract()
-            imdb_id = film_block.find("a").get("href")
-            imdb_id = re.findall(r"tt\d{7,8}", imdb_id)[0]
-            return imdb_id
-        except AttributeError:
-            return "not-found"
-
-
     def imdb_id_logic(self):
-        if self.translated:  # original movie title
-            if (imdb := self.get_imdb_id(self.orig_title, self.year)) != "not-found":
-                print(f"{Fore.GREEN}[+]{Style.RESET_ALL} {self.orig_title}")
-                print(imdb)
+        if self.translated:
+            if (imdb := self.get_imdb_id(self.orig_title, self.year, True)) != False:
+                print(f"{Fore.GREEN}[+]{Style.RESET_ALL} {self.title}")
                 return imdb
-            elif (imdb := self.get_imdb_id(self.title, self.year)) != "not-found":
-                print(f"{Fore.GREEN}[+]{Style.RESET_ALL} {self.orig_title}")
-                print(imdb)
+            elif (imdb := self.get_imdb_id(self.title, self.year, True)) != False:
+                print(f"{Fore.GREEN}[+]{Style.RESET_ALL} {self.title}")
+                return imdb
+            elif (imdb := self.get_imdb_id(self.title, self.year, False)) != False:
+                print(f"{Fore.GREEN}[+]{Style.RESET_ALL} {self.title}")
                 return imdb
             else:
                 print(f"{Fore.RED}[-]{Style.RESET_ALL} {self.title} not found")
                 return "not-found"
+        elif (imdb := self.get_imdb_id(self.title, self.year, True)) != False:
+            print(f"{Fore.GREEN}[+]{Style.RESET_ALL} {self.title}")
+            return imdb
         else:
-            if (imdb := self.get_imdb_id(self.title, self.year)) != "not-found":
-                print(f"{Fore.GREEN}[+]{Style.RESET_ALL} {self.title}")
-                print(imdb)
-                return imdb
-            else:
-                return "not-found"
+            print(f"{Fore.RED}[-]{Style.RESET_ALL} {self.title} not found")
+            return "not-found"
+
+
+    def get_imdb_id(self, title, year, advanced_search):
+        if advanced_search == True:
+            url = f"https://imdb.com/search/title/?realm=title&title=\
+                    {title}&release_date-min={year}&release_date-max={year}"
+            html_class = "lister-item-header"
+        else:
+            url = f"https://www.imdb.com/find?q={title}"
+            html_class = "result_text"
+
+        r = requests.get(url)
+        soup = BeautifulSoup(r.text, "lxml")
+
+        try:
+            film_block = soup.find(class_=html_class).extract()
+            imdb_id = film_block.find("a").get("href")
+            imdb_id = re.findall(r"tt\d{7,8}", imdb_id)[0]
+            return imdb_id
+        except AttributeError:
+            return False
 
 
     def writeMovie(self):
         with open(f"export-{current_date}.csv", "a", newline="", encoding="utf-8") as imdb_csv:
             csv_writer = csv.DictWriter(imdb_csv, fieldnames=fieldnames)
-            csv_writer.writerow({"Const": self.imdb_id, "Title": self.orig_title, "Year": self.year,
+            csv_writer.writerow({"Const": self.imdb_id, "Title": self.orig_title if self.translated is True else self.title, "Year": self.year,
                                  "Your Rating": self.rating})
 
 
@@ -122,6 +129,7 @@ def scrapeRatings(page, username, title_type):
     soup = BeautifulSoup(r.text, "lxml")
     titles_amount = len(soup.find_all(class_="myVoteBox__mainBox"))
     print(f"Scraping {titles_amount} {title_type} from page {page}")
+    scripts = soup.find("span", class_="dataSource").extract()
     i = 1
     while i <= titles_amount:
         vote_box = soup.find(class_="myVoteBox__mainBox").extract()
@@ -129,16 +137,19 @@ def scrapeRatings(page, username, title_type):
         orig_title = vote_box.find(class_="filmPreview__originalTitle")
         translated = False if orig_title is None else True
         year = vote_box.find(class_="filmPreview__year").text
-        rating = vote_box.find(class_="userRate__rate").text
+        rating = scripts.find("script").extract().text
+        rating = json.loads(rating)["r"]
         Movie(title, orig_title, year, rating, translated)
         i+=1
 
 
 def filmweb_export(username):
     initialize_csv(current_date)
+
     page = 1
     while not scrapeRatings(page, username, "films"):
         page += 1
+
     page = 1
     while not scrapeRatings(page, username, "serials"):
         page += 1
