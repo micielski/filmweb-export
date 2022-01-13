@@ -37,29 +37,15 @@ class Movie:
         self.year = year
         self.rating = rating
         self.translated = translated
-        if translated:
-            self.orig_title = orig_title.text
-        else:
-            self.orig_title = None
+        self.orig_title = orig_title.text if translated else None
         self.imdb_id = self.imdb_id_logic()
-        self.writeMovie()
+        self.write_movie()
 
 
     def imdb_id_logic(self):
-        if self.translated:
-            if (imdb := self.get_imdb_id(self.orig_title, self.year, True)) != False:
-                print(f"{Fore.GREEN}[+]{Style.RESET_ALL} {self.title}")
-                return imdb
-            elif (imdb := self.get_imdb_id(self.title, self.year, True)) != False:
-                print(f"{Fore.GREEN}[+]{Style.RESET_ALL} {self.title}")
-                return imdb
-            elif (imdb := self.get_imdb_id(self.title, self.year, False)) != False:
-                print(f"{Fore.GREEN}[+]{Style.RESET_ALL} {self.title}")
-                return imdb
-            else:
-                print(f"{Fore.RED}[-]{Style.RESET_ALL} {self.title} not found")
-                return "not-found"
-        elif (imdb := self.get_imdb_id(self.title, self.year, True)) != False:
+        if (imdb := self.get_imdb_id(self.orig_title, self.year, True)) and self.translated or\
+        (imdb := self.get_imdb_id(self.title, self.year, True)) or\
+        (imdb := self.get_imdb_id(self.title, self.year, False)):
             print(f"{Fore.GREEN}[+]{Style.RESET_ALL} {self.title}")
             return imdb
         else:
@@ -88,7 +74,7 @@ class Movie:
             return False
 
 
-    def writeMovie(self):
+    def write_movie(self):
         with open(f"export-{current_date}.csv", "a", newline="", encoding="utf-8") as imdb_csv:
             csv_writer = csv.DictWriter(imdb_csv, fieldnames=fieldnames)
             csv_writer.writerow({"Const": self.imdb_id, "Title": self.orig_title if self.translated is True else self.title, "Year": self.year,
@@ -117,21 +103,19 @@ def initialize_csv(date):
         writer.writeheader()
 
 
-def scrapeRatings(page, username, title_type):
+def scrape_ratings(page, username, title_type):
     r = requests.get(f"https://filmweb.pl/user/{username}/{title_type}?page={page}", cookies=cookies)
     if "emptyContent" in r.text:
         if type == "serials":
             print(f"Export finished in export-{current_date}.csv")
             return True
-        else:
-            return True
+        return True
 
     soup = BeautifulSoup(r.text, "lxml")
-    titles_amount = len(soup.find_all(class_="myVoteBox__mainBox"))
-    print(f"Scraping {titles_amount} {title_type} from page {page}")
+    titles_amount = soup.find_all(class_="myVoteBox__mainBox")
+    print(f"Scraping {len(titles_amount)} {title_type} from page {page}")
     scripts = soup.find("span", class_="dataSource").extract()
-    i = 1
-    while i <= titles_amount:
+    for _ in titles_amount:
         vote_box = soup.find(class_="myVoteBox__mainBox").extract()
         title = vote_box.find(class_="filmPreview__title").text
         orig_title = vote_box.find(class_="filmPreview__originalTitle")
@@ -140,18 +124,17 @@ def scrapeRatings(page, username, title_type):
         rating = scripts.find("script").extract().text
         rating = json.loads(rating)["r"]
         Movie(title, orig_title, year, rating, translated)
-        i+=1
 
 
 def filmweb_export(username):
     initialize_csv(current_date)
 
     page = 1
-    while not scrapeRatings(page, username, "films"):
+    while not scrape_ratings(page, username, "films"):
         page += 1
 
     page = 1
-    while not scrapeRatings(page, username, "serials"):
+    while not scrape_ratings(page, username, "serials"):
         page += 1
 
 
