@@ -3,6 +3,9 @@ import csv
 from datetime import datetime
 import requests
 import json
+import time
+import os
+import sys
 from colorama import Fore, Style
 from bs4 import BeautifulSoup
 from argparse import ArgumentParser
@@ -11,11 +14,12 @@ from argparse import ArgumentParser
 parser = ArgumentParser(
     description="Export Filmweb's ratings to a TMDB compatible csv file.")
 parser.add_argument("--username", type=str, metavar="<user>",
-                    required=False, help="Filmweb username")
+                    help="Filmweb username")
 parser.add_argument("--token", type=str, metavar="<token>",
-                    required=True, help="Filmweb token cookie")
+                    help="Filmweb token cookie")
 parser.add_argument("--session", type=str, metavar="<session>",
-                    required=True, help="Filmweb session cookie")
+                    help="Filmweb session cookie")
+parser.add_argument("-i", action="store_true", help="interactive mode")
 args = parser.parse_args()
 
 cookies = {
@@ -108,7 +112,6 @@ def scrape_ratings(page, username, title_type):
     if "emptyContent" in r.text:
         if type == "serials":
             print(f"Export finished in export-{current_date}.csv")
-            return True
         return True
 
     soup = BeautifulSoup(r.text, "lxml")
@@ -125,6 +128,37 @@ def scrape_ratings(page, username, title_type):
         rating = json.loads(rating)["r"]
         Movie(title, orig_title, year, rating, translated)
 
+def filmweb_login():
+    from selenium import webdriver
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.chrome.options import Options as ChromeOptions
+    from selenium.webdriver.firefox.options import Options as FirefoxOptions
+    options = ChromeOptions()
+    options.add_argument("--headless")
+    driver = webdriver.Chrome(options=options)
+    driver.implicitly_wait(15)
+    driver.get("https://filmweb.pl/login")
+    driver.find_element(By.ID, "didomi-notice-agree-button").click()
+    driver.find_elements(By.CLASS_NAME, "authButton__text")[1].click()
+    driver.find_element(By.NAME, "j_username").send_keys(input("Username: "))
+    os.system("stty -echo")
+    driver.find_element(By.NAME, "j_password").send_keys(input("Password: "))
+    driver.find_element(By.XPATH, "/html/body/div[3]/div[2]/div/div/form/div[2]/ul/li[1]/button").click()
+    time.sleep(5)
+    os.system("stty echo")
+    print("\n")
+    driver.get("https://filmweb.pl/settings")
+    time.sleep(5)
+    try:
+        cookies["_fwuser_sessionId"] = driver.get_cookie("_fwuser_sessionId")["value"]
+        cookies["_fwuser_token"] = driver.get_cookie("_fwuser_token")["value"]
+        return True
+    except TypeError:
+        print("Either wrong password, or captcha popped up. Try typing in cookies manually")
+        sys.exit(1)
+
+
 
 def filmweb_export(username):
     initialize_csv(current_date)
@@ -137,10 +171,20 @@ def filmweb_export(username):
     while not scrape_ratings(page, username, "serials"):
         page += 1
 
+def main():
+    print("filmweb-export!")
+    if len(sys.argv) == 1:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
 
-print("filmweb-export!")
-if check_cookies():
-    if args.username:
-        filmweb_export(args.username)
-    else:
-        filmweb_export(get_username())
+    if args.i:
+        filmweb_login()
+
+    if check_cookies():
+        if args.username:
+            filmweb_export(args.username)
+        else:
+            filmweb_export(get_username())
+
+if __name__ == "__main__":
+    main()
