@@ -20,6 +20,8 @@ parser.add_argument("--token", type=str, metavar="<token>",
 parser.add_argument("--session", type=str, metavar="<session>",
                     help="Filmweb session cookie")
 parser.add_argument("-i", action="store_true", help="interactive mode")
+parser.add_argument("--chrome", action="store_true", help="Force Chrome browser (only for interactive mode)")
+parser.add_argument("--firefox", action="store_true", help="Force Firefox browser (only for interactive mode)")
 args = parser.parse_args()
 
 cookies = {
@@ -45,20 +47,18 @@ class Movie:
         self.imdb_id = self.imdb_id_logic()
         self.write_movie()
 
-
     def imdb_id_logic(self):
         if (imdb := self.get_imdb_id(self.orig_title, self.year, True)) and self.translated or\
-        (imdb := self.get_imdb_id(self.title, self.year, True)) or\
-        (imdb := self.get_imdb_id(self.title, self.year, False)):
+           (imdb := self.get_imdb_id(self.title, self.year, True)) or\
+           (imdb := self.get_imdb_id(self.title, self.year, False)):
             print(f"{Fore.GREEN}[+]{Style.RESET_ALL} {self.title}")
             return imdb
         else:
             print(f"{Fore.RED}[-]{Style.RESET_ALL} {self.title} not found")
             return "not-found"
 
-
     def get_imdb_id(self, title, year, advanced_search):
-        if advanced_search == True:
+        if advanced_search:
             url = f"https://imdb.com/search/title/?realm=title&title=\
                     {title}&release_date-min={year}&release_date-max={year}"
             html_class = "lister-item-header"
@@ -77,15 +77,20 @@ class Movie:
         except AttributeError:
             return False
 
-
     def write_movie(self):
         with open(f"export-{current_date}.csv", "a", newline="", encoding="utf-8") as imdb_csv:
             csv_writer = csv.DictWriter(imdb_csv, fieldnames=fieldnames)
-            csv_writer.writerow({"Const": self.imdb_id, "Title": self.orig_title if self.translated is True else self.title, "Year": self.year,
-                                 "Your Rating": self.rating})
+            csv_writer.writerow({"Const": self.imdb_id, "Title": self.orig_title if self.translated is True else self.title,
+                                "Year": self.year, "Your Rating": self.rating})
 
 
 def check_cookies():
+    if not cookies["_fwuser_token"]:
+        print(f"{Fore.RED}No cookie \"_fwuser_token\" was provided")
+        cookies["_fwuser_token"] = input("Token cookie: ")
+    if not cookies["_fwuser_session"]:
+        print(f"{Fore.RED}No cookie \"_fwuser_session\" was provided")
+        cookies["_fwuser_session"] = input("Session cookie: ")
     r = requests.get("https://filmweb.pl/settings", cookies=cookies)
     if "Twój adres IP" in r.text:
         print("Valid cookies")
@@ -128,15 +133,18 @@ def scrape_ratings(page, username, title_type):
         rating = json.loads(rating)["r"]
         Movie(title, orig_title, year, rating, translated)
 
+
 def filmweb_login():
     from selenium import webdriver
     from selenium.webdriver.common.by import By
-    from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.chrome.options import Options as ChromeOptions
     from selenium.webdriver.firefox.options import Options as FirefoxOptions
-    options = ChromeOptions()
-    options.add_argument("--headless")
-    driver = webdriver.Chrome(options=options)
+    if args.chrome or not args.chrome and not args.firefox:
+        options = ChromeOptions().add_argument("--headless")
+        driver = webdriver.Chrome(options=options)
+    else:
+        options = FirefoxOptions().add_argument("--headless")
+        driver = webdriver.Firefox(options=options)
     driver.implicitly_wait(15)
     driver.get("https://filmweb.pl/login")
     driver.find_element(By.ID, "didomi-notice-agree-button").click()
@@ -159,7 +167,6 @@ def filmweb_login():
         sys.exit(1)
 
 
-
 def filmweb_export(username):
     initialize_csv(current_date)
 
@@ -171,20 +178,17 @@ def filmweb_export(username):
     while not scrape_ratings(page, username, "serials"):
         page += 1
 
+
 def main():
     print("filmweb-export!")
-    if len(sys.argv) == 1:
-        parser.print_help(sys.stderr)
-        sys.exit(1)
-
     if args.i:
         filmweb_login()
-
     if check_cookies():
         if args.username:
             filmweb_export(args.username)
         else:
             filmweb_export(get_username())
+
 
 if __name__ == "__main__":
     main()
