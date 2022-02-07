@@ -38,10 +38,11 @@ fieldnames = ["Const", "Your Rating", "Date Rated", "Title", "URL",
 
 
 class Movie:
-    def __init__(self, title, orig_title, year, rating, translated):
+    def __init__(self, title, orig_title, year, rating, translated, title_type):
         self.title = title
+        self.title_type = title_type
         self.year = year
-        self.rating = rating
+        self.rating = rating if title_type != "wantToSee" else None
         self.translated = translated
         self.orig_title = orig_title.text if translated else None
         self.imdb_id = self.imdb_id_logic()
@@ -78,7 +79,8 @@ class Movie:
             return False
 
     def write_movie(self):
-        with open(f"export-{current_date}.csv", "a", newline="", encoding="utf-8") as imdb_csv:
+        filename = f"export-{current_date}.csv" if self.title_type != "wantToSee" else f"wantToSee-{current_date}.csv"
+        with open(filename, "a", newline="", encoding="utf-8") as imdb_csv:
             csv_writer = csv.DictWriter(imdb_csv, fieldnames=fieldnames)
             csv_writer.writerow({"Const": self.imdb_id, "Title": self.orig_title if self.translated is True else self.title,
                                 "Year": self.year, "Your Rating": self.rating})
@@ -86,11 +88,11 @@ class Movie:
 
 def check_cookies():
     if not cookies["_fwuser_token"]:
-        print(f"{Fore.RED}No cookie \"_fwuser_token\" was provided")
+        print(f"{Fore.RED}No cookie \"_fwuser_token\" was provided{Style.RESET_ALL}")
         cookies["_fwuser_token"] = input("Token cookie: ")
-    if not cookies["_fwuser_session"]:
-        print(f"{Fore.RED}No cookie \"_fwuser_session\" was provided")
-        cookies["_fwuser_session"] = input("Session cookie: ")
+    if not cookies["_fwuser_sessionId"]:
+        print(f"{Fore.RED}No cookie \"_fwuser_sessionId\" was provided{Style.RESET_ALL}")
+        cookies["_fwuser_sessionId"] = input("Session cookie: ")
     r = requests.get("https://filmweb.pl/settings", cookies=cookies)
     if "Twój adres IP" in r.text:
         print("Valid cookies")
@@ -106,10 +108,11 @@ def get_username():
     return soup.find(class_="userAvatar__image").attrs["alt"]
 
 
-def initialize_csv(date):
-    with open(f"export-{date}.csv", "w", newline="", encoding="utf-8") as imdb_csv:
-        writer = csv.DictWriter(imdb_csv, fieldnames=fieldnames)
-        writer.writeheader()
+def initialize_csv():
+    with open(f"export-{current_date}.csv", "w", newline="", encoding="utf-8") as export, \
+         open(f"wantToSee-{current_date}.csv", "w", newline="", encoding="utf-8") as want_to_see:
+        csv.DictWriter(export, fieldnames=fieldnames).writeheader()
+        csv.DictWriter(want_to_see, fieldnames=fieldnames).writeheader()
 
 
 def scrape_ratings(page, username, title_type):
@@ -122,16 +125,16 @@ def scrape_ratings(page, username, title_type):
     soup = BeautifulSoup(r.text, "lxml")
     titles_amount = soup.find_all(class_="myVoteBox__mainBox")
     print(f"Scraping {len(titles_amount)} {title_type} from page {page}")
-    scripts = soup.find("span", class_="dataSource").extract()
+    scripts = soup.find("span", class_="dataSource").extract() if title_type != "wantToSee" else None
     for _ in titles_amount:
         vote_box = soup.find(class_="myVoteBox__mainBox").extract()
         title = vote_box.find(class_="filmPreview__title").text
         orig_title = vote_box.find(class_="filmPreview__originalTitle")
         translated = False if orig_title is None else True
         year = vote_box.find(class_="filmPreview__year").text
-        rating = scripts.find("script").extract().text
-        rating = json.loads(rating)["r"]
-        Movie(title, orig_title, year, rating, translated)
+        rating = scripts.find("script").extract().text if title_type != "wantToSee" else None
+        rating = json.loads(rating)["r"] if title_type != "wantToSee" else None
+        Movie(title, orig_title, year, rating, translated, title_type)
 
 
 def filmweb_login():
@@ -161,21 +164,22 @@ def filmweb_login():
     try:
         cookies["_fwuser_sessionId"] = driver.get_cookie("_fwuser_sessionId")["value"]
         cookies["_fwuser_token"] = driver.get_cookie("_fwuser_token")["value"]
-        return True
+        return
     except TypeError:
         print("Either wrong password, or captcha popped up. Try typing in cookies manually")
         sys.exit(1)
 
 
 def filmweb_export(username):
-    initialize_csv(current_date)
-
+    initialize_csv()
     page = 1
     while not scrape_ratings(page, username, "films"):
         page += 1
-
     page = 1
     while not scrape_ratings(page, username, "serials"):
+        page += 1
+    page = 1
+    while not scrape_ratings(page, username, "wantToSee"):
         page += 1
 
 
