@@ -35,7 +35,7 @@ def main():
     print("filmweb-export!")
     if args.i:
         filmweb.login(args.force_chrome, args.force_firefox)
-    if filmweb.check_cookies():
+    if filmweb.set_cookies(args.token, args.session):
         if args.username:
             filmweb_export(args.username)
         else:
