@@ -15,14 +15,14 @@ parser.add_argument("--session", type=str, metavar="<session>",
 parser.add_argument("-i", action="store_true", help="interactive mode")
 parser.add_argument("--force_chrome", action="store_true", help="Force Chrome (interactive mode only)")
 parser.add_argument("--force_firefox", action="store_true", help="Force Firefox (interactive mode only)")
+parser.add_argument("--page_start", type=int, metavar="<page>", help="Start from X filmweb page", default=1)
 args = parser.parse_args()
 
 
 def filmweb_export(username):
     initialize_csv()
-    page = 1
-    while not filmweb.scrape(page, username, "films"):
-        page += 1
+    while not filmweb.scrape(args.page_start, username, "films"):
+        args.page_start += 1
     page = 1
     while not filmweb.scrape(page, username, "serials"):
         page += 1

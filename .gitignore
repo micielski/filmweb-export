@@ -1,8 +1,5 @@
-/chromedriver
-settings.cfg
-imdb_v3.csv
-lista.txt
-export.csv
+.vscode/
+__pycache__/
+filmweb/__pycache__/
+exports/
 geckodriver.log
-geckodriver
-filmweb/__pycache__/main.cpython-39.pyc

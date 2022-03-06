@@ -4,6 +4,7 @@ from datetime import datetime
 import requests
 import csv
 import re
+import os
 
 FIELDNAMES = ["Const", "Your Rating", "Date Rated", "Title", "URL",
               "Title Type", "IMDb Rating", "Runtime (mins)", "Year",
@@ -24,7 +25,7 @@ class Movie:
         self.write_movie()
 
     def imdb_id_logic(self):
-        if (imdb := self.get_imdb_id(self.orig_title, self.year, True)) and self.translated or\
+        if self.translated and (imdb := self.get_imdb_id(self.orig_title, self.year, True)) or\
            (imdb := self.get_imdb_id(self.title, self.year, True)) or\
            (imdb := self.get_imdb_id(self.title, self.year, False)):
             print(f"{Fore.GREEN}[+]{Style.RESET_ALL} {self.title}")
@@ -50,11 +51,11 @@ class Movie:
             imdb_id = film_block.find("a").get("href")
             imdb_id = re.findall(r"tt\d{7,8}", imdb_id)[0]
             return imdb_id
-        except AttributeError:
+        except (AttributeError, IndexError):
             return False
 
     def write_movie(self):
-        filename = f"export-{current_date}.csv" if self.title_type != "wantToSee" else f"wantToSee-{current_date}.csv"
+        filename = f"exports/export-{current_date}.csv" if self.title_type != "wantToSee" else f"exports/wantToSee-{current_date}.csv"
         with open(filename, "a", newline="", encoding="utf-8") as imdb_csv:
             csv_writer = csv.DictWriter(imdb_csv, fieldnames=FIELDNAMES)
             csv_writer.writerow({"Const": self.imdb_id, "Title": self.orig_title if self.translated is True else self.title,
@@ -62,7 +63,11 @@ class Movie:
 
 
 def initialize_csv():
-    with open(f"export-{current_date}.csv", "w", newline="", encoding="utf-8") as export,\
-         open(f"wantToSee-{current_date}.csv", "w", newline="", encoding="utf-8") as want_to_see:
+    try:
+        os.mkdir('exports')
+    except FileExistsError:
+        pass
+    with open(f"exports/export-{current_date}.csv", "w", newline="", encoding="utf-8") as export,\
+         open(f"exports/wantToSee-{current_date}.csv", "w", newline="", encoding="utf-8") as want_to_see:
         csv.DictWriter(export, fieldnames=FIELDNAMES).writeheader()
         csv.DictWriter(want_to_see, fieldnames=FIELDNAMES).writeheader()

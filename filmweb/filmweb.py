@@ -47,7 +47,6 @@ def set_cookies(token, session):
     fw_cookies["_fwuser_token"] = token
     fw_cookies["_fwuser_sessionId"] = session
     if not fw_cookies["_fwuser_token"]:
-        print(fw_cookies["_fwuser_token"])
         print(f"{Fore.RED}No cookie \"_fwuser_token\" was provided{Style.RESET_ALL}")
         fw_cookies["_fwuser_token"] = input("_fwuser_token: ")
     if not fw_cookies["_fwuser_sessionId"]:
