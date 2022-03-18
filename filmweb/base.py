@@ -1,10 +1,10 @@
 from bs4 import BeautifulSoup
 from colorama import Fore, Style
 from datetime import datetime
-import requests
 import csv
-import re
 import os
+import re
+import requests
 
 FIELDNAMES = ["Const", "Your Rating", "Date Rated", "Title", "URL",
               "Title Type", "IMDb Rating", "Runtime (mins)", "Year",

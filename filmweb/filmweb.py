@@ -1,10 +1,10 @@
 from bs4 import BeautifulSoup
-import requests
+from colorama import Fore, Style
+import json
 import os
+import requests
 import sys
 import time
-import json
-from colorama import Fore, Style
 
 from filmweb.base import Movie, current_date
 
