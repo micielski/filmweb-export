@@ -1,6 +1,8 @@
 from bs4 import BeautifulSoup
 from colorama import Fore, Style
+from requests.adapters import HTTPAdapter, Retry
 import json
+import math
 import os
 import requests
 import sys
@@ -21,7 +23,24 @@ def get_username():
     return soup.find(class_="userAvatar__image").attrs["alt"]
 
 
-def scrape(page, username, title_type):
+def get_pages_count(username):
+    r = requests.get(f"https://filmweb.pl/user/{username}")
+    soup = BeautifulSoup(r.text, "lxml")
+    extracted_data = soup.find(class_="voteStatsBox VoteStatsBox")
+    f_pages = math.ceil(int(extracted_data.get_attribute_list("data-filmratedcount")[0])/25)
+    s_pages = math.ceil(int(extracted_data.get_attribute_list("data-serialratedcount")[0])/25)
+    w_pages = math.ceil(int(extracted_data.get_attribute_list("data-filmw2scount")[0])/25)
+    return f_pages, s_pages, w_pages
+
+
+def scrape_multithreaded(username, title_type, page):
+    s = requests.Session()
+    retries = Retry(total=10, backoff_factor=0.2)
+    s.mount("https://", HTTPAdapter(max_retries=retries))
+    scrape(username, title_type, page)
+
+
+def scrape(username, title_type, page):
     r = requests.get(f"https://filmweb.pl/user/{username}/{title_type}?page={page}", cookies=fw_cookies)
     if "emptyContent" in r.text:
         if type == "serials":
@@ -30,7 +49,6 @@ def scrape(page, username, title_type):
 
     soup = BeautifulSoup(r.text, "lxml")
     titles_amount = soup.find_all(class_="myVoteBox__mainBox")
-    print(f"Scraping {len(titles_amount)} {title_type} from page {page}")
     scripts = soup.find("span", class_="dataSource").extract() if title_type != "wantToSee" else None
     for _ in titles_amount:
         vote_box = soup.find(class_="myVoteBox__mainBox").extract()
