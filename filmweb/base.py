@@ -11,7 +11,7 @@ FIELDNAMES = ["Const", "Your Rating", "Date Rated", "Title", "URL",
               "Genres", "Num Votes", "Release Date", "Directors"]
 
 current_date = datetime.now().strftime("%d-%m-%Y-%H:%M")
-
+not_found_titles = []
 
 class Movie:
     def __init__(self, title, orig_title, year, rating, translated, title_type):
@@ -23,6 +23,10 @@ class Movie:
         self.orig_title = orig_title.text if translated else None
         self.imdb_id = self.imdb_id_logic()
         self.write_movie()
+
+        if self.imdb_id == "not-found":
+            not_found_titles.append(self.title)
+            
 
     def imdb_id_logic(self):
         if self.translated and (imdb := self.get_imdb_id(self.orig_title, self.year, True)) or\
