@@ -1,6 +1,6 @@
 this readme is outdated, please temporarily refer to 
 ```
-$ python filmweb.py -h
+$ python export.py -h
 ```
 
 
