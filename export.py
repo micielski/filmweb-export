@@ -32,8 +32,10 @@ def filmweb_export(username):
         executor.map(functools.partial(scrape_multithreaded, username, "serials"), list(range(1, s_pages + 1)))
         executor.map(functools.partial(scrape_multithreaded, username, "wantToSee"), list(range(1, w_pages + 1)))
    
-    # TODO: let the user know the location of exported ratings 😏
+    # TODO: improve given paths
     print("Exporting has finished")
+    print("./exports/export-{current_date}.csv")
+    print("./exports/wantToSee-{current_date}.csv")
     if not_found_titles:
         print("Following movies/serials were not found:")
         for title in not_found_titles:
