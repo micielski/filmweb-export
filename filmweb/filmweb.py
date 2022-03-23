@@ -53,7 +53,7 @@ def scrape(username, title_type, page):
     for _ in titles_amount:
         if title_type != "wantToSee":
             title_id = soup.find(class_="ribbon").extract().get_attribute_list("data-id")[0]
-            api_type = "film" if title_type == "films" else "serials"
+            api_type = "film" if title_type == "films" else "serial"
             r_api = requests.get(f"https://api.filmweb.pl/v1/logged/vote/{api_type}/{title_id}/details", cookies=fw_cookies)
             json_api = json.loads(r_api.text)
             rating = json_api["rate"]
