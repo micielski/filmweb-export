@@ -4,7 +4,7 @@ from colorama import Fore, Style
 import functools
 
 from filmweb import filmweb
-from filmweb.base import initialize_csv, not_found_titles
+from filmweb.base import initialize_csv, not_found_titles, current_date
 from filmweb.filmweb import get_pages_count, scrape_multithreaded
 
 
@@ -16,6 +16,8 @@ parser.add_argument("--token", type=str, metavar="<token>",
                     help="Filmweb token cookie")
 parser.add_argument("--session", type=str, metavar="<session>",
                     help="Filmweb session cookie")
+parser.add_argument("--jwt", type=str, metavar="<jwt>",
+                    help="Filmweb JSON Web Token")
 parser.add_argument("--threads", type=int, metavar="<threads>",
                     default=10, help="Number of threads to create. Default: 10")
 parser.add_argument("-i", action="store_true", help="interactive mode")
@@ -31,11 +33,12 @@ def filmweb_export(username):
         executor.map(functools.partial(scrape_multithreaded, username, "films"), list(range(1, f_pages + 1)))
         executor.map(functools.partial(scrape_multithreaded, username, "serials"), list(range(1, s_pages + 1)))
         executor.map(functools.partial(scrape_multithreaded, username, "wantToSee"), list(range(1, w_pages + 1)))
+
    
     # TODO: improve given paths
     print("Exporting has finished")
-    print("./exports/export-{current_date}.csv")
-    print("./exports/wantToSee-{current_date}.csv")
+    print(f"./exports/export-{current_date}.csv")
+    print(f"./exports/wantToSee-{current_date}.csv")
     if not_found_titles:
         print("Following movies/serials were not found:")
         for title in not_found_titles:
@@ -47,7 +50,7 @@ def main():
     initialize_csv()
     if args.i:
         filmweb.login(args.force_chrome, args.force_firefox)
-    if filmweb.set_cookies(args.token, args.session):
+    if filmweb.set_cookies(args.token, args.session, args.jwt):
         if args.username:
             filmweb_export(args.username)
         else:

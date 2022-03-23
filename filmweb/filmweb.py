@@ -13,7 +13,8 @@ from filmweb.base import Movie, current_date
 fw_cookies = {
     "_fwuser_logged": "1",
     "_fwuser_token": None,
-    "_fwuser_sessionId": None
+    "_fwuser_sessionId": None,
+    "JWT": None
 }
 
 
@@ -49,27 +50,39 @@ def scrape(username, title_type, page):
 
     soup = BeautifulSoup(r.text, "lxml")
     titles_amount = soup.find_all(class_="myVoteBox__mainBox")
-    scripts = soup.find("span", class_="dataSource").extract() if title_type != "wantToSee" else None
     for _ in titles_amount:
+        if title_type != "wantToSee":
+            title_id = soup.find(class_="ribbon").extract().get_attribute_list("data-id")[0]
+            api_type = "film" if title_type == "films" else "serials"
+            r_api = requests.get(f"https://api.filmweb.pl/v1/logged/vote/{api_type}/{title_id}/details", cookies=fw_cookies)
+            json_api = json.loads(r_api.text)
+            rating = json_api["rate"]
+        else:
+            rating = None
+
         vote_box = soup.find(class_="myVoteBox__mainBox").extract()
-        title = vote_box.find(class_="filmPreview__title").text
+        title = vote_box.find(class_="filmPreview__title")
+        title = title.text if title != None else None
         orig_title = vote_box.find(class_="filmPreview__originalTitle")
+        orig_title = orig_title.text if orig_title is not None else None
         translated = False if orig_title is None else True
         year = vote_box.find(class_="filmPreview__year").text
-        rating = scripts.find("script").extract().text if title_type != "wantToSee" else None
-        rating = json.loads(rating)["r"] if title_type != "wantToSee" else None
         Movie(title, orig_title, year, rating, translated, title_type)
 
 
-def set_cookies(token, session):
+def set_cookies(token, session, jwt):
     fw_cookies["_fwuser_token"] = token
     fw_cookies["_fwuser_sessionId"] = session
+    fw_cookies["JWT"] = jwt
     if not fw_cookies["_fwuser_token"]:
         print(f"{Fore.RED}No cookie \"_fwuser_token\" was provided{Style.RESET_ALL}")
         fw_cookies["_fwuser_token"] = input("_fwuser_token: ")
     if not fw_cookies["_fwuser_sessionId"]:
         print(f"{Fore.RED}No cookie \"_fwuser_sessionId\" was provided{Style.RESET_ALL}")
         fw_cookies["_fwuser_sessionId"] = input("_fwuser_sessionId: ")
+    if not fw_cookies["JWT"]:
+        print(f"{Fore.RED}No cookie \"JWT\" was provided{Style.RESET_ALL}")
+        fw_cookies["JWT"] = input("JWT: ")
     r = requests.get("https://filmweb.pl/settings", cookies=fw_cookies)
     if "Twój adres IP" in r.text:
         print("Valid cookies")
@@ -85,7 +98,7 @@ def login(chrome, firefox):
     from selenium.common.exceptions import NoSuchElementException
     from selenium.webdriver.chrome.options import Options as ChromeOptions
     from selenium.webdriver.firefox.options import Options as FirefoxOptions
-    if chrome or not chrome and not firefox:
+    if chrome or not chrome and not firefox and not os.environ.get("DOCKER"):
         options = ChromeOptions()
         options.add_argument("headless")
         options.add_argument("window-size=800x600")
@@ -113,7 +126,9 @@ def login(chrome, firefox):
     try:
         fw_cookies["_fwuser_sessionId"] = driver.get_cookie("_fwuser_sessionId")["value"]
         fw_cookies["_fwuser_token"] = driver.get_cookie("_fwuser_token")["value"]
+        fw_cookies["JWT"] = driver.get_cookie("JWT")["value"]
         return
     except TypeError:
         print("Either wrong password, or captcha popped up. Try typing in cookies manually")
         sys.exit(1)
+

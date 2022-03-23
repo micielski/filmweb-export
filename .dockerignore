@@ -1,3 +1,4 @@
 .git
 *.csv
 Dockerfile
+exports/

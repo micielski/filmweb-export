@@ -20,7 +20,7 @@ class Movie:
         self.year = year
         self.rating = rating if title_type != "wantToSee" else None
         self.translated = translated
-        self.orig_title = orig_title.text if translated else None
+        self.orig_title = orig_title if translated else None
         self.imdb_id = self.imdb_id_logic()
         self.write_movie()
 
@@ -75,3 +75,4 @@ def initialize_csv():
          open(f"exports/wantToSee-{current_date}.csv", "w", newline="", encoding="utf-8") as want_to_see:
         csv.DictWriter(export, fieldnames=FIELDNAMES).writeheader()
         csv.DictWriter(want_to_see, fieldnames=FIELDNAMES).writeheader()
+
