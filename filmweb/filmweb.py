@@ -28,9 +28,12 @@ def get_pages_count(username):
     r = requests.get(f"https://filmweb.pl/user/{username}")
     soup = BeautifulSoup(r.text, "lxml")
     extracted_data = soup.find(class_="voteStatsBox VoteStatsBox")
-    f_pages = math.ceil(int(extracted_data.get_attribute_list("data-filmratedcount")[0])/25)
-    s_pages = math.ceil(int(extracted_data.get_attribute_list("data-serialratedcount")[0])/25)
-    w_pages = math.ceil(int(extracted_data.get_attribute_list("data-filmw2scount")[0])/25)
+    f_pages = math.ceil(
+        int(extracted_data.get_attribute_list("data-filmratedcount")[0])/25)
+    s_pages = math.ceil(
+        int(extracted_data.get_attribute_list("data-serialratedcount")[0])/25)
+    w_pages = math.ceil(
+        int(extracted_data.get_attribute_list("data-filmw2scount")[0])/25)
     return f_pages, s_pages, w_pages
 
 
@@ -42,7 +45,8 @@ def scrape_multithreaded(username, title_type, page):
 
 
 def scrape(username, title_type, page):
-    r = requests.get(f"https://filmweb.pl/user/{username}/{title_type}?page={page}", cookies=fw_cookies)
+    r = requests.get(
+        f"https://filmweb.pl/user/{username}/{title_type}?page={page}", cookies=fw_cookies)
     if "emptyContent" in r.text:
         if type == "serials":
             print(f"Export finished in export-{current_date}.csv")
@@ -52,9 +56,11 @@ def scrape(username, title_type, page):
     titles_amount = soup.find_all(class_="myVoteBox__mainBox")
     for _ in titles_amount:
         if title_type != "wantToSee":
-            title_id = soup.find(class_="ribbon").extract().get_attribute_list("data-id")[0]
+            title_id = soup.find(class_="ribbon").extract(
+            ).get_attribute_list("data-id")[0]
             api_type = "film" if title_type == "films" else "serial"
-            r_api = requests.get(f"https://api.filmweb.pl/v1/logged/vote/{api_type}/{title_id}/details", cookies=fw_cookies)
+            r_api = requests.get(
+                f"https://api.filmweb.pl/v1/logged/vote/{api_type}/{title_id}/details", cookies=fw_cookies)
             json_api = json.loads(r_api.text)
             rating = json_api["rate"]
         else:
@@ -78,7 +84,8 @@ def set_cookies(token, session, jwt):
         print(f"{Fore.RED}No cookie \"_fwuser_token\" was provided{Style.RESET_ALL}")
         fw_cookies["_fwuser_token"] = input("_fwuser_token: ")
     if not fw_cookies["_fwuser_sessionId"]:
-        print(f"{Fore.RED}No cookie \"_fwuser_sessionId\" was provided{Style.RESET_ALL}")
+        print(
+            f"{Fore.RED}No cookie \"_fwuser_sessionId\" was provided{Style.RESET_ALL}")
         fw_cookies["_fwuser_sessionId"] = input("_fwuser_sessionId: ")
     if not fw_cookies["JWT"]:
         print(f"{Fore.RED}No cookie \"JWT\" was provided{Style.RESET_ALL}")
@@ -124,11 +131,12 @@ def login(chrome, firefox):
     driver.get("https://filmweb.pl/settings")
     time.sleep(5)
     try:
-        fw_cookies["_fwuser_sessionId"] = driver.get_cookie("_fwuser_sessionId")["value"]
-        fw_cookies["_fwuser_token"] = driver.get_cookie("_fwuser_token")["value"]
+        fw_cookies["_fwuser_sessionId"] = driver.get_cookie("_fwuser_sessionId")[
+            "value"]
+        fw_cookies["_fwuser_token"] = driver.get_cookie("_fwuser_token")[
+            "value"]
         fw_cookies["JWT"] = driver.get_cookie("JWT")["value"]
         return
     except TypeError:
         print("Either wrong password, or captcha popped up. Try typing in cookies manually")
         sys.exit(1)
-

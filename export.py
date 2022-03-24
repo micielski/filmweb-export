@@ -2,9 +2,10 @@ from argparse import ArgumentParser
 from concurrent.futures import ThreadPoolExecutor
 from colorama import Fore, Style
 import functools
+import os
 
 from filmweb import filmweb
-from filmweb.base import initialize_csv, not_found_titles, current_date
+from filmweb.base import initialize_csv, not_found_titles, export_file, want_to_see_file
 from filmweb.filmweb import get_pages_count, scrape_multithreaded
 
 
@@ -21,24 +22,28 @@ parser.add_argument("--jwt", type=str, metavar="<jwt>",
 parser.add_argument("--threads", type=int, metavar="<threads>",
                     default=10, help="Number of threads to create. Default: 10")
 parser.add_argument("-i", action="store_true", help="interactive mode")
-parser.add_argument("--force_chrome", action="store_true", help="Force Chrome (interactive mode only)")
-parser.add_argument("--force_firefox", action="store_true", help="Force Firefox (interactive mode only)")
-parser.add_argument("--page_start", type=int, metavar="<page>", help="Start from X filmweb page", default=1)
+parser.add_argument("--force_chrome", action="store_true",
+                    help="Force Chrome (interactive mode only)")
+parser.add_argument("--force_firefox", action="store_true",
+                    help="Force Firefox (interactive mode only)")
+parser.add_argument("--page_start", type=int, metavar="<page>",
+                    help="Start from X filmweb page", default=1)
 args = parser.parse_args()
 
 
 def filmweb_export(username):
     f_pages, s_pages, w_pages = get_pages_count(username)
     with ThreadPoolExecutor(max_workers=args.threads) as executor:
-        executor.map(functools.partial(scrape_multithreaded, username, "films"), list(range(1, f_pages + 1)))
-        executor.map(functools.partial(scrape_multithreaded, username, "serials"), list(range(1, s_pages + 1)))
-        executor.map(functools.partial(scrape_multithreaded, username, "wantToSee"), list(range(1, w_pages + 1)))
+        executor.map(functools.partial(scrape_multithreaded,
+                     username, "films"), list(range(1, f_pages + 1)))
+        executor.map(functools.partial(scrape_multithreaded,
+                     username, "serials"), list(range(1, s_pages + 1)))
+        executor.map(functools.partial(scrape_multithreaded,
+                     username, "wantToSee"), list(range(1, w_pages + 1)))
 
-   
-    # TODO: improve given paths
     print("Exporting has finished")
-    print(f"./exports/export-{current_date}.csv")
-    print(f"./exports/wantToSee-{current_date}.csv")
+    print(f"Films, Serials: {os.path.abspath(export_file)}")
+    print(f"Watchlist: {os.path.abspath(want_to_see_file)}")
     if not_found_titles:
         print("Following movies/serials were not found:")
         for title in not_found_titles:
@@ -59,4 +64,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
