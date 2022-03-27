@@ -81,14 +81,14 @@ def set_cookies(token, session, jwt):
     fw_cookies["_fwuser_sessionId"] = session
     fw_cookies["JWT"] = jwt
     if not fw_cookies["_fwuser_token"]:
-        print(f"{Fore.RED}No cookie \"_fwuser_token\" was provided{Style.RESET_ALL}")
+        print(f"{Fore.YELLOW}No cookie \"_fwuser_token\" was provided{Style.RESET_ALL}")
         fw_cookies["_fwuser_token"] = input("_fwuser_token: ")
     if not fw_cookies["_fwuser_sessionId"]:
         print(
-            f"{Fore.RED}No cookie \"_fwuser_sessionId\" was provided{Style.RESET_ALL}")
+            f"{Fore.YELLOW}No cookie \"_fwuser_sessionId\" was provided{Style.RESET_ALL}")
         fw_cookies["_fwuser_sessionId"] = input("_fwuser_sessionId: ")
     if not fw_cookies["JWT"]:
-        print(f"{Fore.RED}No cookie \"JWT\" was provided{Style.RESET_ALL}")
+        print(f"{Fore.YELLOW}No cookie \"JWT\" was provided{Style.RESET_ALL}")
         fw_cookies["JWT"] = input("JWT: ")
     r = requests.get("https://filmweb.pl/settings", cookies=fw_cookies)
     if "Twój adres IP" in r.text:
