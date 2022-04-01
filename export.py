@@ -1,11 +1,11 @@
+import functools
+import os
 from argparse import ArgumentParser
 from concurrent.futures import ThreadPoolExecutor
 from colorama import Fore, Style
-import functools
-import os
 
 from filmweb import filmweb
-from filmweb.base import initialize_csv, not_found_titles, export_file, want_to_see_file
+from filmweb.base import initialize_csv, Movie, export_file, want_to_see_file
 from filmweb.filmweb import get_pages_count, scrape_multithreaded
 
 
@@ -20,7 +20,7 @@ parser.add_argument("--session", type=str, metavar="<session>",
 parser.add_argument("--jwt", type=str, metavar="<jwt>",
                     help="Filmweb JSON Web Token")
 parser.add_argument("--threads", type=int, metavar="<threads>",
-                    default=10, help="Number of threads to create. Default: 10")
+                    default=15, help="Number of threads to create. Default: 10")
 parser.add_argument("-i", action="store_true", help="interactive mode")
 parser.add_argument("--force_chrome", action="store_true",
                     help="Force Chrome (interactive mode only)")
@@ -41,12 +41,12 @@ def filmweb_export(username):
         executor.map(functools.partial(scrape_multithreaded,
                      username, "wantToSee"), list(range(1, w_pages + 1)))
 
-    print("Exporting has finished")
+    print(f"Exported {Movie.found_titles_count} titles")
     print(f"Films, Serials: {os.path.abspath(export_file)}")
     print(f"Watchlist: {os.path.abspath(want_to_see_file)}")
-    if not_found_titles:
+    if Movie.not_found_titles:
         print("Following movies/serials were not found:")
-        for title in not_found_titles:
+        for title in Movie.not_found_titles:
             print(f"{Fore.RED}[-]{Style.RESET_ALL} {title}")
 
 

@@ -1,12 +1,17 @@
-from bs4 import BeautifulSoup
-from colorama import Fore, Style
-from requests.adapters import HTTPAdapter, Retry
 import json
 import math
 import os
-import requests
-import sys
 import time
+import sys
+import requests
+from bs4 import BeautifulSoup
+from colorama import Fore, Style
+from requests.adapters import HTTPAdapter, Retry
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.firefox.options import Options as FirefoxOptions
 
 from filmweb.base import Movie, current_date
 
@@ -18,15 +23,89 @@ fw_cookies = {
 }
 
 
+class FilmwebPage:
+    def __init__(self, username: str, title_type: str, page: int):
+        assert page >= 1, "Page should not be lower than 1"
+        self.username = username
+        self.title_type = title_type
+        self.page = page
+        self.api_type = "film" if title_type == "films" else "serial"
+        self.page_source = self.get_page_source()
+        self.soup = self.get_soup()
+        self.titles_amount = self.get_titles_amount()
+
+        if "emptyContent" in self.page_source.text:
+            if type == "serials":
+                print(f"Export finished in export-{current_date}.csv")
+            return
+
+        for box in self.titles_amount:
+            if self.title_type != "wantToSee":
+                title_id = self.get_title_id()
+                r_api = requests.get(f"https://api.filmweb.pl/v1/logged/vote/{self.api_type}/{title_id}/details",
+                                     cookies=fw_cookies)
+                if "400 Invalid token" in r_api.text:
+                    print("Token JWT invalidated. Please run me again with a new token")
+                    sys.exit(1)
+                json_api = json.loads(r_api.text)
+                rating = int(json_api["rate"])
+            else:
+                rating = None
+            title = self.get_title(box)
+            orig_title = self.get_orig_title(box)
+            year = int(self.get_year(box))
+            Movie(title, orig_title, year, rating, self.title_type)
+
+    @staticmethod
+    def get_year(box):
+        try:
+            return box.find(class_="preview__year").text
+        except AttributeError:
+            return box.find(class_="filmPreview__year").text
+
+    @staticmethod
+    def get_orig_title(box):
+        try:
+            orig_title = box.find(class_="preview__originalTitle")
+            return orig_title.text if orig_title else None
+        except AttributeError:
+            orig_title = box.find(class_="filmPreview__originalTitle")
+            return orig_title.text if orig_title else None
+
+    @staticmethod
+    def get_title(box):
+        try:
+            title = box.find(class_="preview__link")
+            return title.text if title else None
+        except AttributeError:
+            title = box.find(class_="filmPreview__title")
+            return title.text if title else None
+
+    def get_title_id(self):
+        return self.soup.find(class_="ribbon").extract()\
+               .get_attribute_list("data-id")[0]
+
+    def get_titles_amount(self):
+        return self.soup.find_all(class_="myVoteBox__mainBox")
+
+    def get_page_source(self):
+        request = requests.get(f"https://filmweb.pl/user/{self.username}/{self.title_type}?page={self.page}",
+                               cookies=fw_cookies)
+        return request
+
+    def get_soup(self):
+        return BeautifulSoup(self.page_source.text, "lxml")
+
+
 def get_username():
-    r = requests.get("https://filmweb.pl/settings", cookies=fw_cookies)
-    soup = BeautifulSoup(r.text, "lxml")
+    page_source = requests.get("https://filmweb.pl/settings", cookies=fw_cookies).text
+    soup = BeautifulSoup(page_source, "lxml")
     return soup.find(class_="userAvatar__image").attrs["alt"]
 
 
 def get_pages_count(username):
-    r = requests.get(f"https://filmweb.pl/user/{username}")
-    soup = BeautifulSoup(r.text, "lxml")
+    page_source = requests.get(f"https://filmweb.pl/user/{username}").text
+    soup = BeautifulSoup(page_source, "lxml")
     extracted_data = soup.find(class_="voteStatsBox VoteStatsBox")
     f_pages = math.ceil(
         int(extracted_data.get_attribute_list("data-filmratedcount")[0])/25)
@@ -38,42 +117,10 @@ def get_pages_count(username):
 
 
 def scrape_multithreaded(username, title_type, page):
-    s = requests.Session()
+    session = requests.Session()
     retries = Retry(total=10, backoff_factor=0.2)
-    s.mount("https://", HTTPAdapter(max_retries=retries))
-    scrape(username, title_type, page)
-
-
-def scrape(username, title_type, page):
-    r = requests.get(
-        f"https://filmweb.pl/user/{username}/{title_type}?page={page}", cookies=fw_cookies)
-    if "emptyContent" in r.text:
-        if type == "serials":
-            print(f"Export finished in export-{current_date}.csv")
-        return True
-
-    soup = BeautifulSoup(r.text, "lxml")
-    titles_amount = soup.find_all(class_="myVoteBox__mainBox")
-    for _ in titles_amount:
-        if title_type != "wantToSee":
-            title_id = soup.find(class_="ribbon").extract(
-            ).get_attribute_list("data-id")[0]
-            api_type = "film" if title_type == "films" else "serial"
-            r_api = requests.get(
-                f"https://api.filmweb.pl/v1/logged/vote/{api_type}/{title_id}/details", cookies=fw_cookies)
-            json_api = json.loads(r_api.text)
-            rating = json_api["rate"]
-        else:
-            rating = None
-
-        vote_box = soup.find(class_="myVoteBox__mainBox").extract()
-        title = vote_box.find(class_="filmPreview__title")
-        title = title.text if title != None else None
-        orig_title = vote_box.find(class_="filmPreview__originalTitle")
-        orig_title = orig_title.text if orig_title is not None else None
-        translated = False if orig_title is None else True
-        year = vote_box.find(class_="filmPreview__year").text
-        Movie(title, orig_title, year, rating, translated, title_type)
+    session.mount("https://", HTTPAdapter(max_retries=retries))
+    FilmwebPage(username, title_type, page)
 
 
 def set_cookies(token, session, jwt):
@@ -90,21 +137,15 @@ def set_cookies(token, session, jwt):
     if not fw_cookies["JWT"]:
         print(f"{Fore.YELLOW}No cookie \"JWT\" was provided{Style.RESET_ALL}")
         fw_cookies["JWT"] = input("JWT: ")
-    r = requests.get("https://filmweb.pl/settings", cookies=fw_cookies)
-    if "Twój adres IP" in r.text:
-        print("Valid cookies")
-        return True
-    else:
+    page_source = requests.get("https://filmweb.pl/settings", cookies=fw_cookies).text
+    if "Twój adres IP" not in page_source:
         print(f"{Fore.RED}Invalid cookies")
         return False
+    print("Valid cookies")
+    return True
 
 
 def login(chrome, firefox):
-    from selenium import webdriver
-    from selenium.webdriver.common.by import By
-    from selenium.common.exceptions import NoSuchElementException
-    from selenium.webdriver.chrome.options import Options as ChromeOptions
-    from selenium.webdriver.firefox.options import Options as FirefoxOptions
     if chrome or not chrome and not firefox and not os.environ.get("DOCKER"):
         options = ChromeOptions()
         options.add_argument("headless")
