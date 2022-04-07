@@ -24,37 +24,54 @@ fw_cookies = {
 
 
 class FilmwebPage:
-    def __init__(self, username: str, title_type: str, page: int):
+    all = []
+
+    def __init__(self, username: str, page: int, title_type: str):
         assert page >= 1, "Page should not be lower than 1"
         self.username = username
         self.title_type = title_type
         self.page = page
-        self.api_type = "film" if title_type == "films" else "serial"
         self.page_source = self.get_page_source()
         self.soup = self.get_soup()
         self.titles_amount = self.get_titles_amount()
+        self.api_type = self.get_api_type()
 
+        if not self.is_page_valid():
+            return
+
+        FilmwebPage.all.append(self)
+
+    def fetch_movies(self):
+        for box in self.titles_amount:
+            Movie(
+                  self.get_title(box),
+                  self.get_orig_title(box),
+                  int(self.get_year(box)),
+                  self.title_type,
+                  self.get_rating()
+                 )
+
+    def get_api_type(self):
+        return "film" if self.title_type == "films" else "serial"
+
+    def get_rating(self):
+        if self.title_type != "wantToSee":
+            title_id = self.get_title_id()
+            r_api = requests.get(f"https://api.filmweb.pl/v1/logged/vote/{self.api_type}/{title_id}/details",
+                                 cookies=fw_cookies)
+            if "400 Invalid token" in r_api.text:
+                print("JWT token invalidated. Please run me again with a new token")
+                sys.exit(1)
+            json_api = json.loads(r_api.text)
+            return int(json_api["rate"])
+        return None
+
+    def is_page_valid(self):
         if "emptyContent" in self.page_source.text:
             if type == "serials":
                 print(f"Export finished in export-{current_date}.csv")
-            return
-
-        for box in self.titles_amount:
-            if self.title_type != "wantToSee":
-                title_id = self.get_title_id()
-                r_api = requests.get(f"https://api.filmweb.pl/v1/logged/vote/{self.api_type}/{title_id}/details",
-                                     cookies=fw_cookies)
-                if "400 Invalid token" in r_api.text:
-                    print("Token JWT invalidated. Please run me again with a new token")
-                    sys.exit(1)
-                json_api = json.loads(r_api.text)
-                rating = int(json_api["rate"])
-            else:
-                rating = None
-            title = self.get_title(box)
-            orig_title = self.get_orig_title(box)
-            year = int(self.get_year(box))
-            Movie(title, orig_title, year, rating, self.title_type)
+            return False
+        return True
 
     @staticmethod
     def get_year(box):
@@ -82,8 +99,7 @@ class FilmwebPage:
             return title.text if title else None
 
     def get_title_id(self):
-        return self.soup.find(class_="ribbon").extract()\
-               .get_attribute_list("data-id")[0]
+        return self.soup.find(class_="previewFilm").extract().get_attribute_list("data-film-id")[0]
 
     def get_titles_amount(self):
         return self.soup.find_all(class_="myVoteBox__mainBox")
@@ -120,7 +136,7 @@ def scrape_multithreaded(username, title_type, page):
     session = requests.Session()
     retries = Retry(total=10, backoff_factor=0.2)
     session.mount("https://", HTTPAdapter(max_retries=retries))
-    FilmwebPage(username, title_type, page)
+    FilmwebPage(username, page, title_type).fetch_movies()
 
 
 def set_cookies(token, session, jwt):

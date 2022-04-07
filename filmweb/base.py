@@ -19,7 +19,7 @@ class Movie:
     not_found_titles = []
     found_titles_count = 0
 
-    def __init__(self, title: str, orig_title: str, year: int, rating: int, title_type: str):
+    def __init__(self, title: str, orig_title: str, year: int, title_type: str, rating: int):
         assert year > 1873, "Year should not be lower than 1874"
 
         self.title = title
@@ -54,8 +54,8 @@ class Movie:
             url = f"https://www.imdb.com/find?q={title}"
             html_class = "result_text"
 
-        r = requests.get(url)
-        soup = BeautifulSoup(r.text, "lxml")
+        page_source = requests.get(url).text
+        soup = BeautifulSoup(page_source, "lxml")
 
         try:
             film_block = soup.find(class_=html_class).extract()

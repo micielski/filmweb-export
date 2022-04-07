@@ -41,6 +41,9 @@ def filmweb_export(username):
         executor.map(functools.partial(scrape_multithreaded,
                      username, "wantToSee"), list(range(1, w_pages + 1)))
 
+    # Debug
+    # scrape_multithreaded(username, "films", 1)
+
     print(f"Exported {Movie.found_titles_count} titles")
     print(f"Films, Serials: {os.path.abspath(export_file)}")
     print(f"Watchlist: {os.path.abspath(want_to_see_file)}")
