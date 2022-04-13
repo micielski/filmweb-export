@@ -1,16 +1,18 @@
-from bs4 import BeautifulSoup
-from colorama import Fore, Style
-from datetime import datetime
 import csv
 import os
 import re
+from datetime import datetime
 import requests
+from bs4 import BeautifulSoup
+from colorama import Fore, Style
+
 
 FIELDNAMES = ["Const", "Your Rating", "Date Rated", "Title", "URL",
               "Title Type", "IMDb Rating", "Runtime (mins)", "Year",
               "Genres", "Num Votes", "Release Date", "Directors"]
 
 current_date = datetime.now().strftime("%d-%m-%Y-%H:%M")
+favorites_file = f"exports/favorites-{current_date}.csv"
 export_file = f"exports/export-{current_date}.csv"
 want_to_see_file = f"exports/wantToSee-{current_date}.csv"
 
@@ -19,7 +21,7 @@ class Movie:
     not_found_titles = []
     found_titles_count = 0
 
-    def __init__(self, title: str, orig_title: str, year: int, title_type: str, rating: int):
+    def __init__(self, title: str, orig_title: str, year: int, title_type: str, rating: int, is_favorite: bool):
         assert year > 1873, "Year should not be lower than 1874"
 
         self.title = title
@@ -28,11 +30,20 @@ class Movie:
         self.rating = rating if title_type != "wantToSee" else None
         self.translated = bool(orig_title)
         self.orig_title = orig_title
+        self.is_favorite = is_favorite
         self.imdb_id = self.imdb_id_logic()
-        self.write_movie()
+        self.write_movie_logic()
 
         if self.imdb_id == "not-found":
             Movie.not_found_titles.append(self.title)
+
+    def write_movie_logic(self):
+        if self.is_favorite:
+            self.write_movie("favorites")
+        elif self.title_type != "wantToSee":
+            self.write_movie("export")
+        else:
+            self.write_movie("wantToSee")
 
     def imdb_id_logic(self):
         if self.translated and \
@@ -66,9 +77,8 @@ class Movie:
         except (AttributeError, IndexError):
             return False
 
-    def write_movie(self):
-        filename = f"exports/export-{current_date}.csv" if self.title_type != "wantToSee"\
-                    else f"exports/wantToSee-{current_date}.csv"
+    def write_movie(self, name: str):
+        filename = f"exports/{name}-{current_date}.csv"
         with open(filename, "a", newline="", encoding="utf-8") as imdb_csv:
             csv_writer = csv.DictWriter(imdb_csv, fieldnames=FIELDNAMES)
             csv_writer.writerow({"Const": self.imdb_id, "Title": self.orig_title if self.translated
@@ -81,6 +91,8 @@ def initialize_csv():
     except FileExistsError:
         pass
     with open(export_file, "w", newline="", encoding="utf-8") as export,\
-            open(want_to_see_file, "w", newline="", encoding="utf-8") as want_to_see:
+            open(want_to_see_file, "w", newline="", encoding="utf-8") as want_to_see,\
+            open(favorites_file, "w", newline="", encoding="utf-8") as favorites:
         csv.DictWriter(export, fieldnames=FIELDNAMES).writeheader()
         csv.DictWriter(want_to_see, fieldnames=FIELDNAMES).writeheader()
+        csv.DictWriter(favorites, fieldnames=FIELDNAMES).writeheader()

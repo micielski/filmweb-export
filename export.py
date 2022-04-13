@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from colorama import Fore, Style
 
 from filmweb import filmweb
-from filmweb.base import initialize_csv, Movie, export_file, want_to_see_file
+from filmweb.base import initialize_csv, Movie, export_file, want_to_see_file, favorites_file
 from filmweb.filmweb import get_pages_count, scrape_multithreaded
 
 
@@ -42,10 +42,11 @@ def filmweb_export(username):
                      username, "wantToSee"), list(range(1, w_pages + 1)))
 
     # Debug
-    # scrape_multithreaded(username, "films", 1)
+    # scrape_multithreaded(username, "wantToSee", 1)
 
     print(f"Exported {Movie.found_titles_count} titles")
     print(f"Films, Serials: {os.path.abspath(export_file)}")
+    print(f"Favorited titles {os.path.abspath(favorites_file)}")
     print(f"Watchlist: {os.path.abspath(want_to_see_file)}")
     if Movie.not_found_titles:
         print("Following movies/serials were not found:")

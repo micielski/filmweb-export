@@ -43,27 +43,26 @@ class FilmwebPage:
 
     def fetch_movies(self):
         for box in self.titles_amount:
-            Movie(
-                  self.get_title(box),
-                  self.get_orig_title(box),
-                  int(self.get_year(box)),
-                  self.title_type,
-                  self.get_rating()
-                 )
+            if self.title_type != "wantToSee":
+                rating, is_favorite = self.get_rating_and_favorite(box)
+            else:
+                rating, is_favorite = None, False
+            Movie(self.get_title(box), self.get_orig_title(box), int(self.get_year(box)),
+                  self.title_type, rating, is_favorite)
 
     def get_api_type(self):
         return "film" if self.title_type == "films" else "serial"
 
-    def get_rating(self):
+    def get_rating_and_favorite(self, box):
         if self.title_type != "wantToSee":
-            title_id = self.get_title_id()
+            title_id = self.get_title_id(box)
             r_api = requests.get(f"https://api.filmweb.pl/v1/logged/vote/{self.api_type}/{title_id}/details",
                                  cookies=fw_cookies)
             if "400 Invalid token" in r_api.text:
                 print("JWT token invalidated. Please run me again with a new token")
                 sys.exit(1)
             json_api = json.loads(r_api.text)
-            return int(json_api["rate"])
+            return int(json_api["rate"]), json_api["favorite"]
         return None
 
     def is_page_valid(self):
@@ -98,8 +97,9 @@ class FilmwebPage:
             title = box.find(class_="filmPreview__title")
             return title.text if title else None
 
-    def get_title_id(self):
-        return self.soup.find(class_="previewFilm").extract().get_attribute_list("data-film-id")[0]
+    @staticmethod
+    def get_title_id(box):
+        return box.find(class_="previewFilm").get_attribute_list("data-film-id")[0]
 
     def get_titles_amount(self):
         return self.soup.find_all(class_="myVoteBox__mainBox")
