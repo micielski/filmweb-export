@@ -47,22 +47,23 @@ class Movie:
 
     def imdb_id_logic(self):
         if self.translated and \
-           (imdb := self.get_imdb_id(self.orig_title, True)) or \
-           (imdb := self.get_imdb_id(self.title, True)) or \
-           (imdb := self.get_imdb_id(self.title, False)):
+           (imdb := Movie.get_imdb_id(self.orig_title, self.year, True)) or \
+           (imdb := Movie.get_imdb_id(self.title, self.year, True)) or \
+           (imdb := Movie.get_imdb_id(self.title, self.year, False)):
             print(f"{Fore.GREEN}[+]{Style.RESET_ALL} {self.title}")
             return imdb
         print(f"{Fore.RED}[-]{Style.RESET_ALL} {self.title}")
         return "not-found"
 
-    def get_imdb_id(self, title, advanced_search):
+    @staticmethod
+    def get_imdb_id(title, year, advanced_search):
         if advanced_search:
-            url = f"https://imdb.com/search/title/?realm=title&title= \
-                    {title}&release_date-min={self.year}&release_date-max= \
-                    {self.year}"
+            # pylint: disable-next=line-too-long
+            url = f"https://imdb.com/search/title/?realm=title&title={title}&release_date-min={year}&release_date-max={year}" # noqa
+            print(url)
             html_class = "lister-item-header"
         else:
-            url = f"https://www.imdb.com/find?q={title}"
+            url = f"https://www.imdb.com/find?q={title} {year}"
             html_class = "result_text"
 
         page_source = requests.get(url).text
