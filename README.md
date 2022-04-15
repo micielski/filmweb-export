@@ -1,7 +1,7 @@
 <div align="center">
   <h1>🎥 filmweb-export</h1>
   <p>export blazingly fast Filmweb's ratings to a TMDB import-compatible csv file (IMDb v3)</p>
-  <img src="https://user-images.githubusercontent.com/73398428/160282968-703dc668-d3b5-4b41-9c12-370ca3995337.png" height="360" width="640">
+  <a href="https://wallhaven.cc/w/o3wzql"><img src="https://user-images.githubusercontent.com/73398428/160282968-703dc668-d3b5-4b41-9c12-370ca3995337.png" height="360" width="640"></a>
 </div>
 
 # Table of contents
