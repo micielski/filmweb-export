@@ -13,7 +13,7 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
 
-from filmweb.base import Movie, current_date
+from filmweb.base import Movie
 
 fw_cookies = {
     "_fwuser_logged": "1",
@@ -59,7 +59,7 @@ class FilmwebPage:
             r_api = requests.get(f"https://api.filmweb.pl/v1/logged/vote/{self.api_type}/{title_id}/details",
                                  cookies=fw_cookies)
             if "400 Invalid token" in r_api.text:
-                print("JWT token invalidated. Please run me again with a new token")
+                print("{Fore.RED}{Back.Black}JWT token invalidated. Please run me again with a new token")
                 sys.exit(1)
             json_api = json.loads(r_api.text)
             return int(json_api["rate"]), json_api["favorite"]
@@ -67,8 +67,6 @@ class FilmwebPage:
 
     def is_page_valid(self):
         if "emptyContent" in self.page_source.text:
-            if type == "serials":
-                print(f"Export finished in export-{current_date}.csv")
             return False
         return True
 
@@ -101,6 +99,12 @@ class FilmwebPage:
     def get_title_id(box):
         return box.find(class_="previewFilm").get_attribute_list("data-film-id")[0]
 
+    @staticmethod
+    def get_username():
+        page_source = requests.get("https://filmweb.pl/settings", cookies=fw_cookies).text
+        soup = BeautifulSoup(page_source, "lxml")
+        return soup.find(class_="userAvatar__image").attrs["alt"]
+
     def get_titles_amount(self):
         return self.soup.find_all(class_="myVoteBox__mainBox")
 
@@ -111,12 +115,6 @@ class FilmwebPage:
 
     def get_soup(self):
         return BeautifulSoup(self.page_source.text, "lxml")
-
-
-def get_username():
-    page_source = requests.get("https://filmweb.pl/settings", cookies=fw_cookies).text
-    soup = BeautifulSoup(page_source, "lxml")
-    return soup.find(class_="userAvatar__image").attrs["alt"]
 
 
 def get_pages_count(username):

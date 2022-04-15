@@ -11,10 +11,10 @@ FIELDNAMES = ["Const", "Your Rating", "Date Rated", "Title", "URL",
               "Title Type", "IMDb Rating", "Runtime (mins)", "Year",
               "Genres", "Num Votes", "Release Date", "Directors"]
 
-current_date = datetime.now().strftime("%d-%m-%Y-%H:%M")
-favorites_file = f"exports/favorites-{current_date}.csv"
-export_file = f"exports/export-{current_date}.csv"
-want_to_see_file = f"exports/wantToSee-{current_date}.csv"
+FILE_DATE = datetime.now().strftime("%d-%m-%Y-%H:%M")
+favorites_file = f"exports/favorites-{FILE_DATE}.csv"
+export_file = f"exports/export-{FILE_DATE}.csv"
+want_to_see_file = f"exports/wantToSee-{FILE_DATE}.csv"
 
 
 class Movie:
@@ -50,9 +50,9 @@ class Movie:
            (imdb := Movie.get_imdb_id(self.orig_title, self.year, True)) or \
            (imdb := Movie.get_imdb_id(self.title, self.year, True)) or \
            (imdb := Movie.get_imdb_id(self.title, self.year, False)):
-            print(f"{Fore.GREEN}[+]{Style.RESET_ALL} {self.title}")
+            print(f"{Fore.GREEN}[+]{Style.RESET_ALL} {self.title} {self.rating}/10 {Style.DIM}|{imdb}{Style.RESET_ALL}")
             return imdb
-        print(f"{Fore.RED}[-]{Style.RESET_ALL} {self.title}")
+        print(f"{Fore.RED}[-]{Style.RESET_ALL} {self.title} {self.rating}/10")
         return "not-found"
 
     @staticmethod
@@ -60,7 +60,6 @@ class Movie:
         if advanced_search:
             # pylint: disable-next=line-too-long
             url = f"https://imdb.com/search/title/?realm=title&title={title}&release_date-min={year}&release_date-max={year}" # noqa
-            print(url)
             html_class = "lister-item-header"
         else:
             url = f"https://www.imdb.com/find?q={title} {year}"
@@ -79,7 +78,7 @@ class Movie:
             return False
 
     def write_movie(self, name: str):
-        filename = f"exports/{name}-{current_date}.csv"
+        filename = f"exports/{name}-{FILE_DATE}.csv"
         with open(filename, "a", newline="", encoding="utf-8") as imdb_csv:
             csv_writer = csv.DictWriter(imdb_csv, fieldnames=FIELDNAMES)
             csv_writer.writerow({"Const": self.imdb_id, "Title": self.orig_title if self.translated
