@@ -1,10 +1,10 @@
 <div align="center">
   <h1>🎥 filmweb-export</h1>
   <p>export blazingly fast Filmweb's ratings to a TMDB import-compatible csv file (IMDb v3)</p>
-  <img src="https://user-images.githubusercontent.com/73398428/160282968-703dc668-d3b5-4b41-9c12-370ca3995337.png" height="360" width="640">
+  <a href="https://wallhaven.cc/w/o3wzql"><img src="https://user-images.githubusercontent.com/73398428/160282968-703dc668-d3b5-4b41-9c12-370ca3995337.png" height="360" width="640"></a>
 </div>
 
-# Table of content
+# Table of contents
 - [Features](#features)
 - [Installation](#installation)
 - [Obtaining cookies](#obtaining-cookies)
@@ -30,7 +30,7 @@
   ```
 # Obtaining cookies
 
-  Keep in mind, if you have Linux (or Windows, but didn't tested yet) and Geckodriver/Chromium you don't have to authorize with cookies thanks to Selenium support. You can use -i flag instead.
+  Keep in mind, if you have Linux (or Windows, but didn't tested yet) and Geckodriver/Chromium you don't have to authorize with cookies thanks to Selenium support. You can use -i flag instead. (but i still prefer typing in cookies manually)
   
   1. Go to a page which requires authentication (i.e. not filmweb main page, but your profile https://filmweb.pl/user/YOUR_USERNAME)
   2. Head to developer tools (press F12 while having focus on a page)
@@ -62,26 +62,36 @@
 
 ## Example usages
 
-  For people authorizing with cookies  
+  #### Login with cookies  
   You'll be prompted for cookies if you won't specify these with flags.
 
   ```
   $ python export.py
   ```
   
-  People authorizing with username & password using Selenium  
+  #### Login with username and a password  
+  You'll be prompted for your credentials
   
   ```
   $ python export.py -i
   ```
-  
-  Threads  
+    
+  #### Threads  
   It may be useful if your internet connection or computer at this time is poor in resources. In that case try lowering threads count.  
-  Please note that the default value is high enough. Going above that, will hurt your exporting performance, and cause some movies to not export!
+  Please note that the default value is high enough. Going above that, it will hurt your exporting performance, and even cause some movies to not export!
   
   ```
   $ python export.py --threads 5
   ```
+    
+  #### Debug  
+  If you see there's something wrong with exported movies, you can enable debug mode to print out error messages  
+  (they do not print cause of python's stupidiness)
+  
+  ```
+  $ python export.py --debug
+  ```
+  
   
 
 ## Docker usage

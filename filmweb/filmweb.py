@@ -69,9 +69,7 @@ class FilmwebPage:
         return None
 
     def is_page_valid(self):
-        if "emptyContent" in self.page_source.text:
-            return False
-        return True
+        return "emptyContent" not in self.page_source.text
 
     @staticmethod
     def get_year(box):
@@ -112,9 +110,10 @@ class FilmwebPage:
         return self.soup.find_all(class_="myVoteBox__mainBox")
 
     def get_page_source(self):
-        request = requests.get(f"https://filmweb.pl/user/{self.username}/{self.title_type}?page={self.page}",
-                               cookies=fw_cookies)
-        return request
+        return requests.get(
+            f"https://filmweb.pl/user/{self.username}/{self.title_type}?page={self.page}",
+            cookies=fw_cookies,
+        )
 
     def get_soup(self):
         return BeautifulSoup(self.page_source.text, "lxml")
