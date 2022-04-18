@@ -22,6 +22,12 @@ fw_cookies = {
     "JWT": None
 }
 
+fw_api_convention = {
+    "films": "film",
+    "serials": "serial",
+    "wantToSee": None,
+}
+
 
 class FilmwebPage:
     all = []
@@ -33,8 +39,8 @@ class FilmwebPage:
         self.page = page
         self.page_source = self.get_page_source()
         self.soup = self.get_soup()
-        self.titles_amount = self.get_titles_amount()
-        self.api_type = self.get_api_type()
+        self.movie_boxes = self.get_movie_boxes()
+        self.api_type = fw_api_convention[title_type]
 
         if not self.is_page_valid():
             return
@@ -42,16 +48,13 @@ class FilmwebPage:
         FilmwebPage.all.append(self)
 
     def fetch_movies(self):
-        for box in self.titles_amount:
+        for box in self.movie_boxes:
             if self.title_type != "wantToSee":
                 rating, is_favorite = self.get_rating_and_favorite(box)
             else:
                 rating, is_favorite = None, False
             Movie(self.get_title(box), self.get_orig_title(box), int(self.get_year(box)),
                   self.title_type, rating, is_favorite)
-
-    def get_api_type(self):
-        return "film" if self.title_type == "films" else "serial"
 
     def get_rating_and_favorite(self, box):
         if self.title_type != "wantToSee":
@@ -105,7 +108,7 @@ class FilmwebPage:
         soup = BeautifulSoup(page_source, "lxml")
         return soup.find(class_="userAvatar__image").attrs["alt"]
 
-    def get_titles_amount(self):
+    def get_movie_boxes(self):
         return self.soup.find_all(class_="myVoteBox__mainBox")
 
     def get_page_source(self):
