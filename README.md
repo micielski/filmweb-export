@@ -54,7 +54,8 @@
     --token <token>      Filmweb token cookie
     --session <session>  Filmweb session cookie
     --jwt <jwt>          Filmweb JSON Web Token
-   --threads <threads>  Number of threads to create. Default: 10
+	--debug              Enable debugging mode
+    --threads <threads>  Number of threads to create. Default: 5
     -i                   interactive mode
     --force_chrome       Force Chrome (interactive mode only)
     --force_firefox      Force Firefox (interactive mode only)
@@ -81,7 +82,7 @@
   Please note that the default value is high enough. Going above that, it will hurt your exporting performance, and even cause some movies to not export!
   
   ```
-  $ python export.py --threads 5
+  $ python export.py --threads 2
   ```
     
   #### Debug  

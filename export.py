@@ -21,7 +21,7 @@ parser.add_argument("--session", type=str, metavar="<session>",
 parser.add_argument("--jwt", type=str, metavar="<jwt>",
                     help="Filmweb JSON Web Token")
 parser.add_argument("--threads", type=int, metavar="<threads>",
-                    default=15, help="Number of threads to create. Default: 10")
+                    default=5, help="Number of threads to create. Default: 5")
 parser.add_argument("-i", action="store_true", help="interactive mode")
 parser.add_argument("--force_chrome", action="store_true",
                     help="Force Chrome (interactive mode only)")
@@ -41,7 +41,7 @@ def filmweb_export(username):
             executor.map(functools.partial(scrape_multithreaded, username, "films"), list(range(1, f_pages + 1)))
             executor.map(functools.partial(scrape_multithreaded, username, "serials"), list(range(1, s_pages + 1)))
             executor.map(functools.partial(scrape_multithreaded, username, "wantToSee"), list(range(1, w_pages + 1)))
-    else:  # this thing definitely needs to be UwUed
+    else:  # this thing definitely needs to be UwUed edit: rewritten to rust*
         for page in list(range(1, f_pages + 1)):
             scrape_multithreaded(username, "films", page)
         for page in list(range(1, s_pages + 1)):
@@ -49,13 +49,11 @@ def filmweb_export(username):
         for page in list(range(1, w_pages + 1)):
             scrape_multithreaded(username, "wantToSee", page)
 
-    # Debug
-    # scrape_multithreaded(username, "wantToSee", 1)
-
     print(f"Exported {Movie.found_titles_count} titles")
     print(f"Films, Serials: {os.path.abspath(export_file)}")
     print(f"Favorited titles {os.path.abspath(favorites_file)}")
     print(f"Watchlist: {os.path.abspath(want_to_see_file)}")
+
     if Movie.not_found_titles:
         print("Following movies/serials were not found:")
         for title in Movie.not_found_titles:

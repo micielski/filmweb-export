@@ -46,6 +46,7 @@ class FilmwebPage:
             return
 
         FilmwebPage.all.append(self)
+        
 
     def fetch_movies(self):
         for box in self.movie_boxes:
@@ -59,10 +60,10 @@ class FilmwebPage:
     def get_rating_and_favorite(self, box):
         if self.title_type != "wantToSee":
             title_id = self.get_title_id(box)
-            r_api = requests.get(f"https://api.filmweb.pl/v1/logged/vote/{self.api_type}/{title_id}/details",
+            r_api = requests.get(f"https://filmweb.pl/api/v1/logged/vote/{self.api_type}/{title_id}/details",
                                  cookies=fw_cookies)
             if "400 Invalid token" in r_api.text:
-                print("{Fore.RED}{Back.Black}JWT token invalidated. Please run me again with a new token")
+                print("{Fore.RED}{Back.Black}JWT token invalidated. Please run again with a new token")
                 sys.exit(1)
             json_api = json.loads(r_api.text)
             return int(json_api["rate"]), json_api["favorite"]
