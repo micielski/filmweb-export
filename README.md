@@ -1,3 +1,4 @@
+## Unmaintained, use micielski/[filmweb-export-rs](https://github.com/micielski/filmweb-export-rs)
 <div align="center">
   <h1>🎥 filmweb-export</h1>
   <p>export blazingly fast Filmweb's ratings to a TMDB import-compatible csv file (IMDb v3)</p>
