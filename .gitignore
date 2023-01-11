@@ -4,3 +4,4 @@ filmweb/__pycache__/
 exports/
 geckodriver.log
 README.md.backup
+venv/
